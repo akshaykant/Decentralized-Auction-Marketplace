@@ -2,12 +2,12 @@
 
 
 ## Intro
-The folling notes should help the user understand how to test the collection of smart contract
+The following notes should help the user understand how to test the collection of smart contract
 
 ## Mnemonic 
 to deploy the smart contract it is necessary to have a private key to sign the transaction. As far as the contract goes, the private key is derived from a mnemonic phrase. 
 
-Our smart contract reads the mnemonic from a file called `mnemonic.txt` (which is in the `.gitignore` file by default, so that it is not uploaded). Assuming you are usign the standard `goal` command, getting the mnemonic fro address `ALKJ6F2OD7COCWD2ROP5QKTMXRCJRS6U5QA34V2TVPNNU4PWIW4RSSUUIE` can be done doing:
+Our smart contract reads the mnemonic from a file called `mnemonic.txt` (which is in the `.gitignore` file by default, so that it is not uploaded). Assuming you are using the standard `goal` command, getting the mnemonic for address `ALKJ6F2OD7COCWD2ROP5QKTMXRCJRS6U5QA34V2TVPNNU4PWIW4RSSUUIE` can be done doing:
 
 ```
 $ goal account export -a ALKJ6F2OD7COCWD2ROP5QKTMXRCJRS6U5QA34V2TVPNNU4PWIW4RSSUUIE
