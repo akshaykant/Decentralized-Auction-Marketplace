@@ -1,0 +1,6 @@
+auction_approval.teal
+auction_clear.teal
+auction_contract.json
+mnemonic.txt
+
+__pycache__/*
