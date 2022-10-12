@@ -18,10 +18,8 @@ from pyteal import *
 
 seller_key = Bytes("seller")
 nft_id_key = Bytes("nft_id")
-# start_time_key = Bytes("start")
 commit_end_key = Bytes("commit")
 start_round_key = Bytes("start")
-# end_time_key = Bytes("end")
 end_round_key = Bytes("end")
 reserve_amount_key = Bytes("reserve_amount")
 min_bid_increment_key = Bytes("min_bid_inc")
@@ -194,7 +192,7 @@ def getRouter():
                     Global.round() < startRound.get(),
                     startRound.get() < commitEnd.get(),
                     commitEnd.get() < endRound.get(),
-                    startRound.get() < endRound.get(),
+                    # startRound.get() < endRound.get(), # redundant check due to previous two
                     )
             ),
             output.set(seller.address())
@@ -232,10 +230,9 @@ def getRouter():
                 # the auction has been set up
                 on_bid_nft_holding.hasValue(),
                 on_bid_nft_holding.value() > Int(0),
-                # the auction has started
-
-                # Global.latest_timestamp() < App.globalGet(commit_end_key),
-                # Global.latest_timestamp() >= App.globalGet(start_time_key),
+                # the auction is in the commit phase
+                Global.round() >= App.globalGet(start_round_key),
+                Global.round() < App.globalGet(commit_end_key),
                 Gtxn[on_commit_txn_index].type_enum() == TxnType.Payment,
                 Gtxn[on_commit_txn_index].sender() == Txn.sender(),
                 Gtxn[on_commit_txn_index].receiver()
@@ -260,9 +257,8 @@ def getRouter():
                     # the auction has been set up
                     on_bid_nft_holding.hasValue(),
                     on_bid_nft_holding.value() > Int(0),
-                    # the bidding phase is over has started
-                    # App.globalGet(commit_end_key) <= Global.latest_timestamp(),
-                    # the auction has not ended
+                    # the auction is in the bidding/reveal phase
+                    App.globalGet(commit_end_key) <= Global.round(),
                     Global.round() < App.globalGet(end_round_key),
                     # the actual bid payment is before the app call
                     Gtxn[on_bid_txn_index].type_enum() == TxnType.Payment,
