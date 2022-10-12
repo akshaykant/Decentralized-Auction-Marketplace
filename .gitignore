@@ -1,6 +1,12 @@
+SealedAuctionContract/com_auction_approval.teal
+SealedAuctionContract/com_auction_clear.teal
+SealedAuctionContract/com_auction_contract.json
 com_auction_approval.teal
 com_auction_clear.teal
 com_auction_contract.json
+AuctionContract/auction_approval.teal
+AuctionContract/auction_clear.teal
+AuctionContract/auction_contract.json
 auction_approval.teal
 auction_clear.teal
 auction_contract.json
