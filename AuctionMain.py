@@ -1,5 +1,3 @@
-from time import time, sleep
-
 # user declared account mnemonics
 with open('mnemonic.txt','r') as f:
     creator_mnemonic = f.read()
@@ -142,8 +140,8 @@ def createAuctionApp(
         senderSK: str,
         seller: str,
         nftID: int,
-        startTime: int,
-        endTime: int,
+        startRound: int,
+        endRound: int,
         reserve: int,
         minBidIncrement: int,
 ) -> int:
@@ -186,8 +184,8 @@ def createAuctionApp(
     app_args = [
         seller,
         nftID,
-        startTime,
-        endTime,
+        startRound,
+        endRound,
         reserve,
         minBidIncrement,
     ]
@@ -264,15 +262,18 @@ def main():
     nftAmount = 1
     nftID = createDummyAsset(algod_client, nftAmount, seller, seller_sk)
     print("The NFT ID is", nftID)
-    startTime = int(time()) + 10  # start time is 10 seconds in the future
-    endTime = startTime + 10  # end time is 30 seconds after start
+    currentRound = algod_client.status().get('last-round')
+    print("Creating auction during round", currentRound+1)
+    startRound = currentRound + 3   # start round is 3 round in the future
+    durationRounds = 1              # auction will last 1 round(s)
+    endRound = startRound + durationRounds  # end round is durationRounds after start round
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
-    print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
+    print("Bob is creating an auction that lasts {} rounds to auction off the NFT...".format(durationRounds))
 
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
-                                        seller, nftID, startTime,
-                                        endTime, reserve, increment)
+                                        seller, nftID, startRound,
+                                        endRound, reserve, increment)
 
     print("AppId is", app_id)
     print("--------------------------------------------")
@@ -284,7 +285,6 @@ def main():
     placeBid(algod_client, app_id, bidder_sk, reserve)
     optInToAsset(algod_client, nftID, bidder_sk)
 
-    sleep(5)
     print("--------------------------------------------")
     print("Closing the Auction application......")
 
