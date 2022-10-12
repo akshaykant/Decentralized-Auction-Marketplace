@@ -178,6 +178,8 @@ def getRouter():
                    minBidIncrement: abi.Uint64, deposit: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
+            # # assert intended size of ABI compound type for Account
+            # Assert(Len(seller.get()) == Int(32)), # PyTEAL v0.18.1 doesn't seem to include method get despite Docs warning to make this check: https://pyteal.readthedocs.io/en/stable/abi.html?highlight=abi#registering-methods
             App.globalPut(seller_key, seller.address()),
             App.globalPut(nft_id_key, nftID.get()),
             App.globalPut(start_round_key, startRound.get()),
@@ -225,6 +227,8 @@ def getRouter():
 
 
         return Seq(
+            # assert intended size of ABI compound type for commitment
+            Assert(Len(commitment.get()) == Int(32)),
             on_bid_nft_holding,
             Assert(And(
                 # the auction has been set up

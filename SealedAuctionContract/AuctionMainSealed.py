@@ -1,6 +1,9 @@
 from time import time, sleep
 from hashlib import sha256
-from random import randrange
+from random import randrange, seed
+
+# Set seed of random generator for nonce - for testing purposes only!
+seed(42)
 
 # user declared account mnemonics
 with open('mnemonic.txt','r') as f:
@@ -130,6 +133,7 @@ def commitAuctionApp(
     app_args = [
         commitment
     ]
+    print("Commitment: " + commitment.hex())
     print(commitment)
 
     atc.add_method_call(
@@ -361,13 +365,13 @@ def main():
 
     print("--------------------------------------------")
     print("Committing to the Auction application......")
-    commitAuctionApp(algod_client, app_id, bidder_sk, reserve,nonce, deposit)
+    commitAuctionApp(algod_client, app_id, bidder_sk, reserve, nonce, deposit)
 
     waitUntilRound(algod_client, commitEndRound)
 
     print("--------------------------------------------")
     print("Bidding the Auction application......")
-    placeBid(algod_client, app_id, bidder_sk, reserve,nonce)
+    placeBid(algod_client, app_id, bidder_sk, reserve, nonce)
     optInToAsset(algod_client, nftID, bidder_sk)
 
     waitUntilRound(algod_client, endRound)
