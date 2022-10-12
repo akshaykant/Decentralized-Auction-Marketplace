@@ -264,8 +264,8 @@ def main():
     print("The NFT ID is", nftID)
     currentRound = algod_client.status().get('last-round')
     print("Creating auction during round", currentRound+1)
-    startRound = currentRound + 3   # start round is 3 round in the future
-    durationRounds = 1              # auction will last 1 round(s)
+    startRound = currentRound + 5   # start round is 3 round in the future
+    durationRounds = 3              # auction will last 1 round(s)
     endRound = startRound + durationRounds  # end round is durationRounds after start round
     reserve = 1_000_000  # 1 Algo
     increment = 100_000  # 0.1 Algo
@@ -280,10 +280,14 @@ def main():
     print("Setuping up the Auction application......")
     setupAuctionApp(algod_client, app_id, creator_private_key, seller_sk, nftID)
 
+    waitUntilRound(algod_client, startRound)
+
     print("--------------------------------------------")
     print("Bidding the Auction application......")
     placeBid(algod_client, app_id, bidder_sk, reserve)
     optInToAsset(algod_client, nftID, bidder_sk)
+
+    waitUntilRound(algod_client, endRound)
 
     print("--------------------------------------------")
     print("Closing the Auction application......")

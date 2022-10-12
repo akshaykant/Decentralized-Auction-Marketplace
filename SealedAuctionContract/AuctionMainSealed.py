@@ -300,7 +300,7 @@ def main():
     bidder = account.address_from_private_key(bidder_sk)
     print("seller address", seller)
 
-    assert creator_address == "ALKJ6F2OD7COCWD2ROP5QKTMXRCJRS6U5QA34V2TVPNNU4PWIW4RSSUUIE"
+    # assert creator_address == "ALKJ6F2OD7COCWD2ROP5QKTMXRCJRS6U5QA34V2TVPNNU4PWIW4RSSUUIE"
     # assert creator_address == "7JMQUHTDHI5MIEEK4MT7CT3H4TMH7FW22PRVIBLWCC7UTMF6Z6GILV7SYI"
 
     amt = 1000000
@@ -335,19 +335,21 @@ def main():
 
     currentRound = algod_client.status().get('last-round')
     print("Creating auction during round", currentRound+1)
-    startRound = currentRound + 5
-    commitRound = startRound + 1
-    durationRounds = 6 
-    endRound = startRound + durationRounds
+    startRound = currentRound + 3
+    commitDurationRounds = 3
+    commitEndRound = startRound + commitDurationRounds
+    revealDurationRounds = 2
+    endRound = commitEndRound + revealDurationRounds
 
     reserve = 100_000  # 0.1 Algo
     increment = 10_000  # 0.01 Algo
-    deposit = 100_000 # 0.1 Algo
+    deposit = 100_000  # 0.1 Algo
     nonce = randrange(0,600)
     # print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
-    print("Bob is creating an auction that lasts {} rounds to auction off the NFT...".format(durationRounds))
+    print("Bob is creating a sealed auction for the NFT with commit period lasting {} rounds \
+        and revealing period lasting {}".format(commitDurationRounds, revealDurationRounds))
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
-                                        seller, nftID, startRound, commitRound,
+                                        seller, nftID, startRound, commitEndRound,
                                         endRound, reserve, increment, deposit)
 
     print("AppID is", app_id)
@@ -355,18 +357,21 @@ def main():
     print("Setup the Auction application......")
     setupAuctionApp(algod_client, app_id, creator_private_key, seller_sk, nftID)
 
+    waitUntilRound(algod_client, startRound)
+
     print("--------------------------------------------")
     print("Committing to the Auction application......")
     commitAuctionApp(algod_client, app_id, bidder_sk, reserve,nonce, deposit)
 
-    sleep(10)
+    waitUntilRound(algod_client, commitEndRound)
 
     print("--------------------------------------------")
     print("Bidding the Auction application......")
     placeBid(algod_client, app_id, bidder_sk, reserve,nonce)
     optInToAsset(algod_client, nftID, bidder_sk)
 
-    sleep(10)
+    waitUntilRound(algod_client, endRound)
+
     print("--------------------------------------------")
     print("Closing the Auction application......")
 

@@ -4,6 +4,19 @@ from algosdk import account, mnemonic, encoding
 from random import choice, randint
 from algosdk.atomic_transaction_composer import *
 from algosdk.abi import Method, Contract
+from time import sleep
+
+# Function waits until a block with specific round has been accepted
+def waitUntilRound(
+        client: algod.AlgodClient,
+        round: int,
+):
+    print("Waiting for round {}".format(round))
+    currentRound = client.status().get('last-round')
+    while not currentRound >= round:
+        currentRound = client.status().get('last-round')
+        sleep(1)
+
 
 # helper function to compile program source
 def compile_program(client, source_code):
