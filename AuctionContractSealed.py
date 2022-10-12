@@ -18,9 +18,11 @@ from pyteal import *
 
 seller_key = Bytes("seller")
 nft_id_key = Bytes("nft_id")
-start_time_key = Bytes("start")
+# start_time_key = Bytes("start")
 commit_end_key = Bytes("commit")
-end_time_key = Bytes("end")
+start_round_key = Bytes("start")
+# end_time_key = Bytes("end")
+end_round_key = Bytes("end")
 reserve_amount_key = Bytes("reserve_amount")
 min_bid_increment_key = Bytes("min_bid_inc")
 num_bids_key = Bytes("num_bids")
@@ -98,7 +100,7 @@ def closeAccountTo(account: Expr) -> Expr:
     )
 
 on_delete = Seq(
-    If(Global.latest_timestamp() < App.globalGet(start_time_key)).Then(
+    If(Global.round() < App.globalGet(start_round_key)).Then(
         Seq(
             # the auction has not yet started, it's ok to delete
             Assert(
@@ -115,7 +117,7 @@ on_delete = Seq(
             Approve(),
         )
     ),
-    If(App.globalGet(end_time_key) <= Global.latest_timestamp()).Then(
+    If(App.globalGet(end_round_key) <= Global.round()).Then(
         Seq(
             # the auction has ended, pay out assets
             If(App.globalGet(lead_bid_account_key) != Global.zero_address())
@@ -174,25 +176,25 @@ def getRouter():
 
 
     @router.method(no_op=CallConfig.CREATE)
-    def create_app(seller: abi.Account, nftID: abi.Uint64, startTime: abi.Uint64, commitEnd: abi.Uint64, endTime: abi.Uint64, reserve: abi.Uint64,
+    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64, endRound: abi.Uint64, reserve: abi.Uint64,
                    minBidIncrement: abi.Uint64, deposit: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
             App.globalPut(seller_key, seller.address()),
             App.globalPut(nft_id_key, nftID.get()),
-            App.globalPut(start_time_key, startTime.get()),
+            App.globalPut(start_round_key, startRound.get()),
             App.globalPut(commit_end_key, commitEnd.get()),
-            App.globalPut(end_time_key, endTime.get()),
+            App.globalPut(end_round_key, endRound.get()),
             App.globalPut(reserve_amount_key, reserve.get()),
             App.globalPut(min_bid_increment_key, minBidIncrement.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
             App.globalPut(deposit_value_key, deposit.get()),
             Assert(
                 And(
-                    Global.latest_timestamp() < startTime.get(),
-                    startTime.get() < commitEnd.get(),
-                    commitEnd.get() < endTime.get(),
-                    startTime.get() < endTime.get(),
+                    Global.round() < startRound.get(),
+                    startRound.get() < commitEnd.get(),
+                    commitEnd.get() < endRound.get(),
+                    startRound.get() < endRound.get(),
                     )
             ),
             output.set(seller.address())
@@ -201,7 +203,7 @@ def getRouter():
     @router.method(no_op=CallConfig.CALL)
     def on_setup():
         return Seq(
-            Assert(Global.latest_timestamp() < App.globalGet(start_time_key)),
+            Assert(Global.round() < App.globalGet(start_round_key)),
             # opt into NFT asset -- because you can't opt in if you're already opted in, this is what
             # we'll use to make sure the contract has been set up
             InnerTxnBuilder.Begin(),
@@ -261,7 +263,7 @@ def getRouter():
                     # the bidding phase is over has started
                     # App.globalGet(commit_end_key) <= Global.latest_timestamp(),
                     # the auction has not ended
-                    Global.latest_timestamp() < App.globalGet(end_time_key),
+                    Global.round() < App.globalGet(end_round_key),
                     # the actual bid payment is before the app call
                     Gtxn[on_bid_txn_index].type_enum() == TxnType.Payment,
                     Gtxn[on_bid_txn_index].sender() == Txn.sender(),

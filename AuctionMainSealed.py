@@ -199,9 +199,9 @@ def createAuctionApp(
         senderSK: str,
         seller: str,
         nftID: int,
-        startTime: int,
-        commitTime: int,
-        endTime: int,
+        startRound: int,
+        commitRound: int,
+        endRound: int,
         reserve: int,
         minBidIncrement: int,
         deposit: int
@@ -242,9 +242,9 @@ def createAuctionApp(
     app_args = [
         seller,
         nftID,
-        startTime,
-        commitTime,
-        endTime,
+        startRound,
+        commitRound,
+        endRound,
         reserve,
         minBidIncrement,
         deposit
@@ -330,18 +330,25 @@ def main():
     nftAmount = 1
     nftID = createDummyAsset(algod_client, nftAmount, seller, seller_sk)
     print("The NFT ID is", nftID)
-    startTime = int(time()) + 10  # start time is 10 seconds in the future
-    commitTime = startTime + 10
-    endTime = startTime + 30  # end time is 30 seconds after start
+    # startTime = int(time()) + 10  # start time is 10 seconds in the future
+    # endTime = startTime + 30  # end time is 30 seconds after start
+
+    currentRound = algod_client.status().get('last-round')
+    print("Creating auction during round", currentRound+1)
+    startRound = currentRound + 5
+    commitRound = startRound + 1
+    durationRounds = 6 
+    endRound = startRound + durationRounds
+
     reserve = 100_000  # 0.1 Algo
     increment = 10_000  # 0.01 Algo
     deposit = 100_000 # 0.1 Algo
     nonce = randrange(0,600)
-    print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
-
+    # print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
+    print("Bob is creating an auction that lasts {} rounds to auction off the NFT...".format(durationRounds))
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
-                                        seller, nftID, startTime, commitTime,
-                                        endTime, reserve, increment, deposit)
+                                        seller, nftID, startRound, commitRound,
+                                        endRound, reserve, increment, deposit)
 
     print("AppID is", app_id)
     print("--------------------------------------------")
