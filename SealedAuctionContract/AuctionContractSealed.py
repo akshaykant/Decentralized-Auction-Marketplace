@@ -128,7 +128,7 @@ on_delete = Seq(
                 # the auction was not successful because no bids were placed: return the nft to the seller
                 closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key))
             ),
-            # send remaining funds to the contract creator
+            # send remaining funds (i.e. all non-revealed bids) to the contract creator
             closeAccountTo(Global.creator_address()),
             Approve(),
             )
