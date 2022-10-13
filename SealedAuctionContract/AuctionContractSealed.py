@@ -8,12 +8,6 @@ from pyteal import *
 # from src.util import *
 from util import *
 
-# user declared account mnemonics
-creator_mnemonic = "employ spot view century canyon fossil upon hollow tone chicken behave bamboo cool correct vehicle mirror movie scrap budget join music then poverty ability gadget"
-# user declared algod connection parameters. Node must have EnableDeveloperAPI set to true in its config
-algod_address = "http://localhost:4001"
-algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-
 from pyteal import *
 
 seller_key = Bytes("seller")
