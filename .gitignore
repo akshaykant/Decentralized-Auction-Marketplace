@@ -1,3 +1,4 @@
+test_contract.json
 SealedAuctionContract/com_auction_approval.teal
 SealedAuctionContract/com_auction_clear.teal
 SealedAuctionContract/com_auction_contract.json
@@ -13,3 +14,4 @@ auction_contract.json
 mnemonic.txt
 
 __pycache__/*
+*/__pycache__/*

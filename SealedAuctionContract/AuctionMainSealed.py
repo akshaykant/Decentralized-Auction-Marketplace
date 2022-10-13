@@ -6,7 +6,7 @@ from random import randrange, seed
 seed(42)
 
 # user declared account mnemonics
-with open('mnemonic.txt','r') as f:
+with open('../mnemonic.txt','r') as f:
     creator_mnemonic = f.read()
 # user declared algod connection parameters. Node must have EnableDeveloperAPI set to true in its config
 algod_address = "http://localhost:4001"
@@ -289,7 +289,7 @@ def createAuctionApp(
 
 def main():
     # user declared account mnemonics
-    with open('mnemonic.txt','r') as f:
+    with open('../mnemonic.txt','r') as f:
         creator_mnemonic = f.read()
     creator_private_key = get_private_key_from_mnemonic(creator_mnemonic)
     creator_address = account.address_from_private_key(creator_private_key)
@@ -339,10 +339,10 @@ def main():
 
     currentRound = algod_client.status().get('last-round')
     print("Creating auction during round", currentRound+1)
-    startRound = currentRound + 3
+    startRound = currentRound + 5
     commitDurationRounds = 3
     commitEndRound = startRound + commitDurationRounds
-    revealDurationRounds = 2
+    revealDurationRounds = 5
     endRound = commitEndRound + revealDurationRounds
 
     reserve = 100_000  # 0.1 Algo
