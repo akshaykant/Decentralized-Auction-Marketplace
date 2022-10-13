@@ -339,11 +339,11 @@ def main():
 
     currentRound = algod_client.status().get('last-round')
     print("Creating auction during round", currentRound+1)
-    startRound = currentRound + 3
+    startRound = currentRound + 5
     commitDurationRounds = 3
     commitEndRound = startRound + commitDurationRounds
-    revealDurationRounds = 2
-    endRound = commitEndRound + revealDurationRounds
+    revealDurationRounds = 3
+    endRound = commitEndRound + revealDurationRounds + 2
 
     reserve = 100_000  # 0.1 Algo
     increment = 10_000  # 0.01 Algo
