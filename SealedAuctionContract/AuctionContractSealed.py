@@ -89,8 +89,8 @@ on_delete = Seq(
             ),
             # if the auction contract account has opted into the nft, close it out
             closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key)),
-            # if the auction contract still has funds, send them all to the seller
-            closeAccountTo(App.globalGet(seller_key)),
+            # if the auction contract still has funds, send them all to the contract creator
+            closeAccountTo(Global.creator_address()),
             Approve(),
         )
     ),
@@ -153,7 +153,8 @@ def getRouter():
 
 
     @router.method(no_op=CallConfig.CREATE)
-    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64, endRound: abi.Uint64, reserve: abi.Uint64, *, output: abi.String) -> Expr:
+    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64,
+                   endRound: abi.Uint64, reserve: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
             # assert intended size of ABI compound type
