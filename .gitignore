@@ -13,3 +13,4 @@ auction_contract.json
 mnemonic.txt
 
 __pycache__/*
+*/__pycache__/*
