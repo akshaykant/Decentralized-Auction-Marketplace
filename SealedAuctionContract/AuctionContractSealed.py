@@ -200,6 +200,7 @@ def getRouter():
 
     @router.method(opt_in=CallConfig.CALL)
     def on_commit(commitment: abi.DynamicBytes):
+        on_commit_txn_index = Txn.group_index() - Int(1)
         on_bid_nft_holding = AssetHolding.balance(
             Global.current_application_address(), App.globalGet(nft_id_key)
         )
@@ -215,12 +216,13 @@ def getRouter():
                 # the auction is in the commit phase
                 Global.round() >= App.globalGet(start_round_key),
                 Global.round() < App.globalGet(commit_end_key),
-                # Check the transaction is a payment to the contract address
-                Txn.type_enum() == TxnType.Payment,
-                Txn.receiver() == Global.current_application_address(),
+                # Check if app call is accompanied by a payment transaction in the same group for collateral deposit
+                Gtxn[on_commit_txn_index].type_enum() == TxnType.Payment,
+                Gtxn[on_commit_txn_index].sender() == Txn.sender(),
+                Gtxn[on_commit_txn_index].receiver() == Global.current_application_address(),
             )),
-            App.localPut(Txn.sender(), commitment_local_key, commitment.get()),
-            App.localPut(Txn.sender(), deposit_local_key, Txn.amount())
+            App.localPut(Gtxn[on_commit_txn_index].sender(), commitment_local_key, commitment.get()),
+            App.localPut(Gtxn[on_commit_txn_index].sender(), deposit_local_key, Gtxn[on_commit_txn_index].amount())
         )
 
     @router.method(no_op=CallConfig.CALL)
@@ -228,7 +230,7 @@ def getRouter():
         on_bid_nft_holding = AssetHolding.balance(
             Global.current_application_address(), App.globalGet(nft_id_key)
         )
-        # App.localPut(Gtxn[on_bid_txn_index].sender(), nonce_local_key, nonce.get())
+        # App.localPut(Txn.sender(), nonce_local_key, nonce.get())
         Log(Sha256(Concat(Itob(amount.get()), Itob(nonce.get())))),
         return Seq(
             on_bid_nft_holding,
