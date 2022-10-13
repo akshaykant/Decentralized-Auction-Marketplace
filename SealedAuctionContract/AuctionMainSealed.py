@@ -342,8 +342,8 @@ def main():
     startRound = currentRound + 5
     commitDurationRounds = 3
     commitEndRound = startRound + commitDurationRounds
-    revealDurationRounds = 3
-    endRound = commitEndRound + revealDurationRounds + 2
+    revealDurationRounds = 5
+    endRound = commitEndRound + revealDurationRounds
 
     reserve = 100_000  # 0.1 Algo
     increment = 10_000  # 0.01 Algo
