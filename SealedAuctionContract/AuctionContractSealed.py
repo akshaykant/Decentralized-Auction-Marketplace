@@ -16,15 +16,13 @@ commit_end_key = Bytes("commit")
 start_round_key = Bytes("start")
 end_round_key = Bytes("end")
 reserve_amount_key = Bytes("reserve_amount")
-min_bid_increment_key = Bytes("min_bid_inc")
-num_bids_key = Bytes("num_bids")
-lead_bid_amount_key = Bytes("bid_amount")
-lead_bid_account_key = Bytes("bid_account")
-deposit_value_key = Bytes("deposit")
+lead_bid_amount_key = Bytes("1st_amount")
+lead_bid_account_key = Bytes("1st_account")
+second_highest_bid_amount_key = Bytes("2nd_amount")
 
 commitment_local_key = Bytes("commitment")
-value_local_key = Bytes("value")
-nonce_local_key = Bytes("nonce")
+deposit_local_key = Bytes("deposit")
+#nonce_local_key = Bytes("nonce")
 
 @Subroutine(TealType.none)
 def closeNFTTo(assetID: Expr, account: Expr) -> Expr:
@@ -49,28 +47,15 @@ def closeNFTTo(assetID: Expr, account: Expr) -> Expr:
     )
 
 @Subroutine(TealType.none)
-def repayPreviousLeadBidder(prevLeadBidder: Expr, prevLeadBidAmount: Expr) -> Expr:
+def repayAmount(receiver: Expr, amount: Expr) -> Expr:
     return Seq(
+        # Built inner Tx for repaying amount
         InnerTxnBuilder.Begin(),
         InnerTxnBuilder.SetFields(
             {
                 TxnField.type_enum: TxnType.Payment,
-                TxnField.amount: prevLeadBidAmount - Global.min_txn_fee(),
-                TxnField.receiver: prevLeadBidder,
-            }
-        ),
-        InnerTxnBuilder.Submit(),
-    )
-
-@Subroutine(TealType.none)
-def repayDeposit(bidder: Expr) -> Expr:
-    return Seq(
-        InnerTxnBuilder.Begin(),
-        InnerTxnBuilder.SetFields(
-            {
-                TxnField.type_enum: TxnType.Payment,
-                TxnField.amount: App.globalGet(deposit_value_key) - Global.min_txn_fee(),
-                TxnField.receiver: bidder,
+                TxnField.amount: amount - Global.min_txn_fee(),
+                TxnField.receiver: receiver,
             }
         ),
         InnerTxnBuilder.Submit(),
@@ -168,8 +153,7 @@ def getRouter():
 
 
     @router.method(no_op=CallConfig.CREATE)
-    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64, endRound: abi.Uint64, reserve: abi.Uint64,
-                   minBidIncrement: abi.Uint64, deposit: abi.Uint64, *, output: abi.String) -> Expr:
+    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64, endRound: abi.Uint64, reserve: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
             # assert intended size of ABI compound type
@@ -180,15 +164,16 @@ def getRouter():
             App.globalPut(commit_end_key, commitEnd.get()),
             App.globalPut(end_round_key, endRound.get()),
             App.globalPut(reserve_amount_key, reserve.get()),
-            App.globalPut(min_bid_increment_key, minBidIncrement.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
-            App.globalPut(deposit_value_key, deposit.get()),
+            # Set initial bid amounts to 0 - unsure if necessary or done by default
+            App.globalPut(lead_bid_amount_key, Int(0)),
+            App.globalPut(second_highest_bid_amount_key, Int(0)),
+            # Check if rounds are correctly set
             Assert(
                 And(
                     Global.round() < startRound.get(),
                     startRound.get() < commitEnd.get(),
                     commitEnd.get() < endRound.get(),
-                    # startRound.get() < endRound.get(), # redundant check due to previous two
                     )
             ),
             output.set(seller.address())
@@ -197,6 +182,7 @@ def getRouter():
     @router.method(no_op=CallConfig.CALL)
     def on_setup():
         return Seq(
+            # Check if auction hasn't yet started
             Assert(Global.round() < App.globalGet(start_round_key)),
             # opt into NFT asset -- because you can't opt in if you're already opted in, this is what
             # we'll use to make sure the contract has been set up
@@ -214,11 +200,9 @@ def getRouter():
 
     @router.method(opt_in=CallConfig.CALL)
     def on_commit(commitment: abi.DynamicBytes):
-        on_commit_txn_index = Txn.group_index() - Int(1)
         on_bid_nft_holding = AssetHolding.balance(
             Global.current_application_address(), App.globalGet(nft_id_key)
         )
-
 
         return Seq(
             # assert intended size of ABI compound type for commitment
@@ -231,23 +215,21 @@ def getRouter():
                 # the auction is in the commit phase
                 Global.round() >= App.globalGet(start_round_key),
                 Global.round() < App.globalGet(commit_end_key),
-                Gtxn[on_commit_txn_index].type_enum() == TxnType.Payment,
-                Gtxn[on_commit_txn_index].sender() == Txn.sender(),
-                Gtxn[on_commit_txn_index].receiver()
-                    == Global.current_application_address(),
-                Gtxn[on_commit_txn_index].amount() == App.globalGet(deposit_value_key)
+                # Check the transaction is a payment to the contract address
+                Txn.type_enum() == TxnType.Payment,
+                Txn.receiver() == Global.current_application_address(),
             )),
-            App.localPut(Gtxn[on_commit_txn_index].sender(), commitment_local_key, commitment.get())
+            App.localPut(Txn.sender(), commitment_local_key, commitment.get()),
+            App.localPut(Txn.sender(), deposit_local_key, Txn.amount())
         )
 
     @router.method(no_op=CallConfig.CALL)
-    def on_bid(nonce: abi.Uint64):
-        on_bid_txn_index = Txn.group_index() - Int(1)
+    def on_bid(nonce: abi.Uint64, amount: abi.Uint64):
         on_bid_nft_holding = AssetHolding.balance(
             Global.current_application_address(), App.globalGet(nft_id_key)
         )
         # App.localPut(Gtxn[on_bid_txn_index].sender(), nonce_local_key, nonce.get())
-        Log(Sha256(Concat(Itob(Gtxn[on_bid_txn_index].amount()), Itob(nonce.get())))),
+        Log(Sha256(Concat(Itob(amount.get()), Itob(nonce.get())))),
         return Seq(
             on_bid_nft_holding,
             Assert(
@@ -258,41 +240,73 @@ def getRouter():
                     # the auction is in the bidding/reveal phase
                     App.globalGet(commit_end_key) <= Global.round(),
                     Global.round() < App.globalGet(end_round_key),
-                    # the actual bid payment is before the app call
-                    Gtxn[on_bid_txn_index].type_enum() == TxnType.Payment,
-                    Gtxn[on_bid_txn_index].sender() == Txn.sender(),
-                    Gtxn[on_bid_txn_index].receiver()
-                        == Global.current_application_address(),
-
                     # need Concat(byte1,byte2) to check multiple bytes
                     Sha256(Concat(
-                        Itob(Gtxn[on_bid_txn_index].amount()),
+                        Itob(amount.get()),
                         Itob(nonce.get()))) ==
-                        App.localGet(Gtxn[on_bid_txn_index].sender(), commitment_local_key),
+                        App.localGet(Txn.sender(), commitment_local_key),
                     )
             ),
-            Log(Sha256(Concat(Itob(Gtxn[on_bid_txn_index].amount()), Itob(nonce.get())))),
-            repayDeposit(Txn.sender()),
-            App.localDel(Gtxn[on_bid_txn_index].sender(), commitment_local_key),
-            App.localPut(Gtxn[on_bid_txn_index].sender(), value_local_key, Gtxn[on_bid_txn_index].amount()),
+            Log(Sha256(Concat(Itob(amount.get()), Itob(nonce.get())))),
+            # Check if the bid is valid - i.e. larger or equal to deposited collateral
             If(
-                Gtxn[on_bid_txn_index].amount()
-                >= App.globalGet(lead_bid_amount_key) + App.globalGet(min_bid_increment_key)
+                amount.get() <= App.localGet(Txn.sender(), deposit_local_key)
             ).Then(
-                Seq(
-                    If(App.globalGet(lead_bid_account_key) != Global.zero_address()).Then(
-                        repayPreviousLeadBidder(
-                            App.globalGet(lead_bid_account_key),
-                            App.globalGet(lead_bid_amount_key),
+                # Check if the bid is the highest made
+                If(
+                    amount.get() > App.globalGet(lead_bid_amount_key)
+                ).Then(
+                    Seq(
+                        # Repay the previous highest bid
+                        If(App.globalGet(lead_bid_account_key) != Global.zero_address()).Then(
+                            repayAmount(
+                                App.globalGet(lead_bid_account_key),
+                                App.globalGet(lead_bid_amount_key),
+                            ),
+                        ),
+                        # Set the previous highest bid as the 2nd highest
+                        App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_account_key)),
+                        # Set the new highest bid and the leading account
+                        App.globalPut(lead_bid_amount_key, amount.get()),
+                        App.globalPut(lead_bid_account_key, Txn.sender()),
+                        # Refund the overcollateralization of the current highest bid
+                        If(
+                            App.localGet(Txn.sender(), deposit_local_key) - amount.get() >= Global.min_txn_fee(),
+                        ).Then(
+                            repayAmount(
+                                App.globalGet(lead_bid_account_key),
+                                App.localGet(Txn.sender(), deposit_local_key) - amount.get(),
+                            ),
                         )
-                    ),
-                    App.globalPut(lead_bid_amount_key, Gtxn[on_bid_txn_index].amount()),
-                    App.globalPut(lead_bid_account_key, Gtxn[on_bid_txn_index].sender()),
-                    App.globalPut(num_bids_key, App.globalGet(num_bids_key) + Int(1)),
-                    Approve(),
+                    )
+                )
+                .Else(
+                    # Check if the bid is 2nd highest
+                    If(
+                        amount.get() > App.globalGet(second_highest_bid_amount_key)
+                    ).Then(
+                        # Set the bid as 2nd highest
+                        App.globalPut(second_highest_bid_amount_key, amount.get()),
+                    )
+                    .Else(
+                        # Return the full bid
+                        repayAmount(
+                            Txn.sender(),
+                            App.localGet(Txn.sender(), deposit_local_key),
+                        )
+                    )
+                )
+            )
+            .Else(
+                # Return the full bid because it's invalid, i.e. it wasn't fully (over-)collateralized
+                repayAmount(
+                    Txn.sender(),
+                    App.localGet(Txn.sender(), deposit_local_key),
                 )
             ),
-            Reject(),
+            # Delete local deposit
+            App.localDel(Txn.sender(), deposit_local_key),
+            Approve(),
         )
 
     return router
