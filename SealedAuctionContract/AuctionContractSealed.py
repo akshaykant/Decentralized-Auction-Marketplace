@@ -10,6 +10,8 @@ from util import *
 
 from pyteal import *
 
+INIT_BID_AMOUNT = 0
+
 seller_key = Bytes("seller")
 nft_id_key = Bytes("nft_id")
 commit_end_key = Bytes("commit")
@@ -99,33 +101,41 @@ on_delete = Seq(
             # the auction has ended, pay out assets
             If(App.globalGet(lead_bid_account_key) != Global.zero_address())
             .Then(
-                If(
-                    App.globalGet(lead_bid_amount_key)
-                    >= App.globalGet(reserve_amount_key)
-                )
-                .Then(
-                    # the auction was successful: send lead bid account the nft
+                # If(
+                #     App.globalGet(lead_bid_amount_key)
+                #     >= App.globalGet(reserve_amount_key)
+                # )
+                # .Then(
+
+                # The auction was successful: send lead bid account the nft and payout seller
+                Seq(
                     closeNFTTo(
                         App.globalGet(nft_id_key),
                         App.globalGet(lead_bid_account_key),
-                    )
+                    ),
+                    repayAmount(
+                        App.globalGet(lead_bid_account_key),
+                        App.globalGet(lead_bid_amount_key),
+                    ),
                 )
-                .Else(
-                    Seq(
-                        # the auction was not successful because the reserve was not met: return
-                        # the nft to the seller and repay the lead bidder
-                        closeNFTTo(
-                            App.globalGet(nft_id_key), App.globalGet(seller_key)
-                        ),
-                        repayAmount(
-                            App.globalGet(lead_bid_account_key),
-                            App.globalGet(lead_bid_amount_key),
-                        ),
-                    )
-                )
+
+                # )
+                # .Else(
+                #     Seq(
+                #         # the auction was not successful because the reserve was not met: return
+                #         # the nft to the seller and repay the lead bidder
+                #         closeNFTTo(
+                #             App.globalGet(nft_id_key), App.globalGet(seller_key)
+                #         ),
+                #         repayAmount(
+                #             App.globalGet(lead_bid_account_key),
+                #             App.globalGet(lead_bid_amount_key),
+                #         ),
+                #     )
+                # )
             )
             .Else(
-                # the auction was not successful because no bids were placed: return the nft to the seller
+                # The auction was not successful because no valid bids were made
                 closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key))
             ),
             # send remaining funds (i.e. all non-revealed bids) to the contract creator
@@ -140,7 +150,7 @@ def getRouter():
     # Main router class
     router = Router(
         # Name of the contract
-        "AuctionContract",
+        "SealedOvercollateralizedAuctionContract",
         # What to do for each on-complete type when no arguments are passed (bare call)
         BareCallActions(
             # On create only, just approve
@@ -166,9 +176,9 @@ def getRouter():
             App.globalPut(end_round_key, endRound.get()),
             App.globalPut(reserve_amount_key, reserve.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
-            # Set initial bid amounts to 0 - unsure if necessary or done by default
-            App.globalPut(lead_bid_amount_key, Int(0)),
-            App.globalPut(second_highest_bid_amount_key, Int(0)),
+            # Set initial bid amounts to 0
+            App.globalPut(lead_bid_amount_key, Int(INIT_BID_AMOUNT)),
+            App.globalPut(second_highest_bid_amount_key, Int(INIT_BID_AMOUNT)),
             # Check if rounds are correctly set
             Assert(
                 And(
@@ -251,9 +261,12 @@ def getRouter():
                     )
             ),
             Log(Sha256(Concat(Itob(amount.get()), Itob(nonce.get())))),
-            # Check if the bid is valid - i.e. larger or equal to deposited collateral
+            # Check if the bid is valid, i.e. larger or equal to deposited collateral and above the asking price
             If(
-                amount.get() <= App.localGet(Txn.sender(), deposit_local_key)
+                And(
+                    amount.get() <= App.localGet(Txn.sender(), deposit_local_key),
+                    amount.get() >= App.globalGet(reserve_amount_key),
+                )
             ).Then(
                 # Check if the bid is the highest made
                 If(
