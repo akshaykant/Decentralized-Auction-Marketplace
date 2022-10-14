@@ -22,16 +22,20 @@ def closeAuction(
         app_id: int,
         closer: str,
 ):
+    app_addr = client.application_info(app_id).get('params').get('creator')
+
     global_state = read_global_state(client, app_id)
 
     nft_id = global_state['nft_id']
 
     accounts: List[str] = [encoding.encode_address(global_state["seller"])]
 
-    if any(global_state["bid_account"]):
-        # if "bid_account" is not the zero address
-        accounts.append(encoding.encode_address(global_state["bid_account"]))
+    if any(global_state["1st_account"]):
+        # if "1st_account" is not the zero address
+        accounts.append(encoding.encode_address(global_state["1st_account"]))
 
+    # Not sure why this is needed
+    accounts.append(app_addr)
 
     deleteTxn = transaction.ApplicationDeleteTxn(
         sender=account.address_from_private_key(closer),
@@ -53,51 +57,32 @@ def placeBid(
         bid_amount: int,
         nonce: int
 ) -> None:
-    app_addr = get_application_address(app_id)
 
     suggestedParams = client.suggested_params()
     global_state = read_global_state(client, app_id)
     nft_id = global_state['nft_id']
 
-    if any(global_state["bid_account"]):
-        # if "bid_account" is not the zero address
-        prevBidLeader = global_state["bid_account"]
-    else:
-        prevBidLeader = None
-
     atc = AtomicTransactionComposer()
     bidder_addr = account.address_from_private_key(bidder_sk)
     bidder_signer = AccountTransactionSigner(bidder_sk)
-
-    ptxn = transaction.PaymentTxn(bidder_addr, suggestedParams, app_addr, bid_amount)
-    tws = TransactionWithSigner(ptxn, bidder_signer)
-    atc.add_transaction(tws)
 
     with open("./com_auction_contract.json") as f:
         js = f.read()
     nonceHex = nonce#.to_bytes(8, 'big')
     app_args = [
-        nonceHex
+        nonceHex,
+        bid_amount
     ]
-    if prevBidLeader == None:
-        atc.add_method_call(app_id=app_id,
-                            method=get_method('on_bid', js),
-                            sender=bidder_addr,
-                            sp=suggestedParams,
-                            signer=bidder_signer,
-                            method_args=app_args,
-                            foreign_assets=[nft_id],
-                            )
-    else:
-        atc.add_method_call(app_id=app_id,
-                            method=get_method('on_bid', js),
-                            sender=bidder_addr,
-                            sp=suggestedParams,
-                            signer=bidder_signer,
-                            method_args=app_args,
-                            foreign_assets=[nft_id],
-                            accounts=[prevBidLeader]
-                            )
+
+    atc.add_method_call(app_id=app_id,
+                        method=get_method('on_bid', js),
+                        sender=bidder_addr,
+                        sp=suggestedParams,
+                        signer=bidder_signer,
+                        method_args=app_args,
+                        foreign_assets=[nft_id],
+                        )
+
     result = atc.execute(client, 10)
 
     print("Global state:", read_global_state(client, app_id))
@@ -166,11 +151,11 @@ def setupAuctionApp(
 
     fundingAmount = (
         # min account balance
-            100_000
-            # additional min balance to opt into NFT
-            + 100_000
-            # 3 * min txn fee
-            + 3 * 1_000
+        100_000
+        # additional min balance to opt into NFT
+        + 100_000
+        # 3 * min txn fee
+        + 3 * 1_000
     )
 
     atc = AtomicTransactionComposer()
@@ -206,10 +191,8 @@ def createAuctionApp(
         startRound: int,
         commitRound: int,
         endRound: int,
-        reserve: int,
-        minBidIncrement: int,
-        deposit: int
-) :#-> int:
+        reserve: int
+):
     # declare application state storage (immutable)
     local_ints = 1
     local_bytes = 1
@@ -249,9 +232,7 @@ def createAuctionApp(
         startRound,
         commitRound,
         endRound,
-        reserve,
-        minBidIncrement,
-        deposit
+        reserve
     ]
 
     atc = AtomicTransactionComposer()
@@ -346,15 +327,15 @@ def main():
     endRound = commitEndRound + revealDurationRounds
 
     reserve = 100_000  # 0.1 Algo
-    increment = 10_000  # 0.01 Algo
-    deposit = 100_000  # 0.1 Algo
+    bid_amount = 200_000 # 0.2 Algo
+    deposit = 300_000  # 0.3 Algo
     nonce = randrange(0,600)
     # print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
     print("Bob is creating a sealed auction for the NFT with commit period lasting {} rounds \
         and revealing period lasting {}".format(commitDurationRounds, revealDurationRounds))
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
                                         seller, nftID, startRound, commitEndRound,
-                                        endRound, reserve, increment, deposit)
+                                        endRound, reserve)
 
     print("AppID is", app_id)
     print("--------------------------------------------")
@@ -365,13 +346,13 @@ def main():
 
     print("--------------------------------------------")
     print("Committing to the Auction application......")
-    commitAuctionApp(algod_client, app_id, bidder_sk, reserve, nonce, deposit)
+    commitAuctionApp(algod_client, app_id, bidder_sk, bid_amount, nonce, deposit)
 
     waitUntilRound(algod_client, commitEndRound)
 
     print("--------------------------------------------")
     print("Bidding the Auction application......")
-    placeBid(algod_client, app_id, bidder_sk, reserve, nonce)
+    placeBid(algod_client, app_id, bidder_sk, bid_amount, nonce)
     optInToAsset(algod_client, nftID, bidder_sk)
 
     waitUntilRound(algod_client, endRound)

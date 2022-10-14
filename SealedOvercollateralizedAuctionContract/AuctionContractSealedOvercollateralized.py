@@ -114,7 +114,7 @@ on_delete = Seq(
                         App.globalGet(lead_bid_account_key),
                     ),
                     repayAmount(
-                        App.globalGet(lead_bid_account_key),
+                        App.globalGet(seller_key),
                         App.globalGet(lead_bid_amount_key),
                     ),
                 )
@@ -164,7 +164,7 @@ on_clear_state = Seq(
                     ),
                 ),
                 # Set the previous highest bid as the 2nd highest
-                App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_account_key)),
+                App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_amount_key)),
                 # Set the new highest bid and the leading account
                 App.globalPut(lead_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
                 App.globalPut(lead_bid_account_key, Txn.sender()),
@@ -336,7 +336,7 @@ def getRouter():
                             ),
                         ),
                         # Set the previous highest bid as the 2nd highest
-                        App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_account_key)),
+                        App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_amount_key)),
                         # Set the new highest bid and the leading account
                         App.globalPut(lead_bid_amount_key, amount.get()),
                         App.globalPut(lead_bid_account_key, Txn.sender()),
