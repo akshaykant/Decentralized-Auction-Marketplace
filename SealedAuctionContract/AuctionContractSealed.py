@@ -315,7 +315,7 @@ def getRouter():
                     App.globalGet(lead_bid_amount_key),
                 )
             )
-                .Else(
+            .Else(
                 # Auction was not successful because no valid bids were received => return the NFT to the seller
                 # Note: if seller has opted-out of the NFT, the Tx will fail and NFT will remain in the smart contract
                 # until it has been retrieved.
