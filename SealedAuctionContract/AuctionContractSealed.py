@@ -338,7 +338,7 @@ def getRouter():
                     App.globalGet(end_round_key) <= Global.round(),
                     # Check if the sender is the winner - i.e. wants the payout
                     Txn.sender() == App.globalGet(lead_bid_account_key),
-                    # Check if the seller hasn't been paid yet
+                    # Check if the winner hasn't been paid yet
                     App.globalGet(winner_has_been_paid_key) == Int(HAS_NOT_BEEN_PAID),
                 )
             ),
