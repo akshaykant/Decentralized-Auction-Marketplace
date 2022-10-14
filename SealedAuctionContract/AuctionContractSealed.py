@@ -178,8 +178,8 @@ def getRouter():
             App.globalPut(lead_bid_account_key, Global.zero_address()),
             App.globalPut(deposit_value_key, deposit.get()),
             # Mark that neither seller nor winner have been paid
-            App.globalPut(seller_has_been_paid_key, Int(0)),
-            App.globalPut(winner_has_been_paid_key, Int(0)),
+            App.globalPut(seller_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
+            App.globalPut(winner_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             # Check if rounds are correctly set
             Assert(
                 And(
