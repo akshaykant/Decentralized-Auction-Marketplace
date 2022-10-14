@@ -146,6 +146,58 @@ on_delete = Seq(
     Reject(),
 )
 
+on_clear_state = Seq(
+    # Check if the unrevealed bid is valid, i.e. above the asking price
+    If(
+        App.localGet(Txn.sender(), deposit_local_key) >= App.globalGet(reserve_amount_key)
+    ).Then(
+        # Check if the unrevealed bid is the highest made
+        If(
+            App.localGet(Txn.sender(), deposit_local_key) > App.globalGet(lead_bid_amount_key)
+        ).Then(
+            Seq(
+                # Repay the previous highest bid
+                If(App.globalGet(lead_bid_account_key) != Global.zero_address()).Then(
+                    repayAmount(
+                        App.globalGet(lead_bid_account_key),
+                        App.globalGet(lead_bid_amount_key),
+                    ),
+                ),
+                # Set the previous highest bid as the 2nd highest
+                App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_account_key)),
+                # Set the new highest bid and the leading account
+                App.globalPut(lead_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
+                App.globalPut(lead_bid_account_key, Txn.sender()),
+            )
+        )
+        .Else(
+            # Check if the bid is 2nd highest
+            If(
+                App.localGet(Txn.sender(), deposit_local_key) > App.globalGet(second_highest_bid_amount_key)
+            ).Then(
+                # Set the bid as 2nd highest
+                App.globalPut(second_highest_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
+            )
+            .Else(
+                # Return the full bid
+                repayAmount(
+                    Txn.sender(),
+                    App.localGet(Txn.sender(), deposit_local_key),
+                )
+            )
+        )
+    )
+    .Else(
+        # Return the full bid because it's invalid, i.e. isn't above the asking price
+        repayAmount(
+            Txn.sender(),
+            App.localGet(Txn.sender(), deposit_local_key),
+        )
+    ),
+    # Approve clearing out
+    Approve(),
+)
+
 def getRouter():
     # Main router class
     router = Router(
@@ -158,6 +210,9 @@ def getRouter():
             # Always let creator update/delete but only by the creator of this contract
             # update_application=OnCompleteAction.always(Reject()),
             delete_application=OnCompleteAction.call_only(on_delete),
+            # Opting out of local state will result in committing full collateral as bid, thus is discouraged
+            close_out=OnCompleteAction.call_only(Reject()),
+            clear_state=OnCompleteAction.call_only(on_clear_state),
         ),
     )
 
@@ -314,7 +369,8 @@ def getRouter():
                 )
             )
             .Else(
-                # Return the full bid because it's invalid, i.e. it wasn't fully (over-)collateralized
+                # Return the full bid because it's invalid, i.e. it wasn't fully (over-)collateralized or above the
+                # asking price
                 repayAmount(
                     Txn.sender(),
                     App.localGet(Txn.sender(), deposit_local_key),
