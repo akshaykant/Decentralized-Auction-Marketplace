@@ -84,6 +84,8 @@ def closeAuction(
         app_id: int,
         closer: str,
 ):
+    app_addr = client.application_info(app_id).get('params').get('creator')
+
     global_state = read_global_state(client, app_id)
 
     nft_id = global_state['nft_id']
@@ -94,6 +96,8 @@ def closeAuction(
         # if "bid_account" is not the zero address
         accounts.append(encoding.encode_address(global_state["bid_account"]))
 
+    # Not sure why this is needed
+    accounts.append(app_addr)
 
     deleteTxn = transaction.ApplicationDeleteTxn(
         sender=account.address_from_private_key(closer),
@@ -228,11 +232,11 @@ def setupAuctionApp(
 
     fundingAmount = (
         # min account balance
-            100_000
-            # additional min balance to opt into NFT
-            + 100_000
-            # 3 * min txn fee
-            + 3 * 1_000
+        100_000
+        # additional min balance to opt into NFT
+        + 100_000
+        # 3 * min txn fee
+        + 3 * 1_000
     )
 
     atc = AtomicTransactionComposer()
@@ -271,12 +275,13 @@ def createAuctionApp(
         reserve: int,
         minBidIncrement: int,
         deposit: int,
-        serviceFee: int
-) :#-> int:
+        auction_type: int,
+        serviceFee: int,
+):
     # declare application state storage (immutable)
     local_ints = 1
     local_bytes = 1
-    global_ints = 12
+    global_ints = 14
     global_bytes = 2
     global_schema = transaction.StateSchema(global_ints, global_bytes)
     local_schema = transaction.StateSchema(local_ints, local_bytes)
@@ -315,6 +320,7 @@ def createAuctionApp(
         reserve,
         minBidIncrement,
         deposit,
+        auction_type,
         serviceFee
     ]
 
@@ -410,16 +416,18 @@ def main():
     endRound = commitEndRound + revealDurationRounds
 
     reserve = 100_000  # 0.1 Algo
+    bid = 350_000  # 0.35 Algo
     increment = 10_000  # 0.01 Algo
     deposit = 100_000  # 0.1 Algo
     nonce = randrange(0,600)
+    auction_type = VICKREY_TYPE
     # print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
     print("Bob is creating a sealed auction for the NFT with commit period lasting {} rounds \
         and revealing period lasting {}".format(commitDurationRounds, revealDurationRounds))
     serviceFee = 2  # percentage number of fee with respect to winning bid, paid to the contract creator
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
                                         seller, nftID, startRound, commitEndRound,
-                                        endRound, reserve, increment, deposit, serviceFee)
+                                        endRound, reserve, increment, deposit, auction_type, serviceFee)
 
     print("AppID is", app_id)
     print("--------------------------------------------")
@@ -430,13 +438,13 @@ def main():
 
     print("--------------------------------------------")
     print("Committing to the Auction application......")
-    commitAuctionApp(algod_client, app_id, bidder_sk, reserve, nonce, deposit)
+    commitAuctionApp(algod_client, app_id, bidder_sk, bid, nonce, deposit)
 
     waitUntilRound(algod_client, commitEndRound)
 
     print("--------------------------------------------")
     print("Bidding the Auction application......")
-    placeBid(algod_client, app_id, bidder_sk, reserve, nonce)
+    placeBid(algod_client, app_id, bidder_sk, bid, nonce)
 
     waitUntilRound(algod_client, endRound)
 
