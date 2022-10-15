@@ -338,7 +338,7 @@ def main():
     increment = 100_000  # 0.1 Algo
     print("Bob is creating an auction that lasts {} rounds to auction off the NFT...".format(durationRounds))
 
-    serviceFee = 2  # percentage number of fee with respect to winning bid
+    serviceFee = 2  # percentage number of fee with respect to winning bid, paid to the contract creator
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
                                         seller, nftID, startRound,
                                         endRound, reserve, increment, serviceFee)
