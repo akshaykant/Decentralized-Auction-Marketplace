@@ -26,7 +26,7 @@ lead_bid_amount_key = Bytes("1st_amount")
 lead_bid_account_key = Bytes("1st_account")
 lead_bid_deposit_key = Bytes("1st_deposit")
 second_highest_bid_amount_key = Bytes("2nd_amount")
-contract_type_key = Bytes("contract_type")
+auction_type_key = Bytes("auction_type")
 service_fee_key = Bytes("service_fee")
 seller_has_been_paid_key = Bytes("seller_paid")
 winner_has_been_paid_key = Bytes("winner_paid")
@@ -197,7 +197,7 @@ def getRouter():
             App.globalPut(commit_end_key, commitEnd.get()),
             App.globalPut(end_round_key, endRound.get()),
             App.globalPut(reserve_amount_key, reserve.get()),
-            App.globalPut(contract_type_key, auctionType.get()),
+            App.globalPut(auction_type_key, auctionType.get()),
             App.globalPut(service_fee_key, serviceFee.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
             # Set highest and second highest bid amounts to reserve amount
@@ -370,7 +370,7 @@ def getRouter():
             ).Then(
                 # Auction was successful => pay out the seller depending on auction type
                 If(
-                    App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
+                    App.globalGet(auction_type_key) == Int(VICKREY_TYPE)
                 ).Then(
                     # In case of Vickrey auction, payout the the second highest bid
                     repayAmount(
@@ -442,7 +442,7 @@ def getRouter():
             ),
             # Refund the winner the overcollaterization depending on auction type
             If(
-                App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
+                App.globalGet(auction_type_key) == Int(VICKREY_TYPE)
             ).Then(
                 # In case of Vickrey auction, return up to the second highest bid
                 # Check if the return is above the min transaction fee not to lock funds because nothing can be
