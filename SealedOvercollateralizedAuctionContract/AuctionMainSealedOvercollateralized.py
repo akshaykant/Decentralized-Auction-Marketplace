@@ -191,7 +191,8 @@ def createAuctionApp(
         startRound: int,
         commitRound: int,
         endRound: int,
-        reserve: int
+        reserve: int,
+        auction_type: int,
 ):
     # declare application state storage (immutable)
     local_ints = 1
@@ -232,7 +233,8 @@ def createAuctionApp(
         startRound,
         commitRound,
         endRound,
-        reserve
+        reserve,
+        auction_type
     ]
 
     atc = AtomicTransactionComposer()
@@ -330,12 +332,13 @@ def main():
     bid_amount = 200_000 # 0.2 Algo
     deposit = 300_000  # 0.3 Algo
     nonce = randrange(0,600)
+    auction_type = VICKREY_TYPE
     # print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
     print("Bob is creating a sealed auction for the NFT with commit period lasting {} rounds \
         and revealing period lasting {}".format(commitDurationRounds, revealDurationRounds))
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
                                         seller, nftID, startRound, commitEndRound,
-                                        endRound, reserve)
+                                        endRound, reserve, auction_type)
 
     print("AppID is", app_id)
     print("--------------------------------------------")

@@ -10,7 +10,8 @@ from util import *
 
 from pyteal import *
 
-INIT_BID_AMOUNT = 0
+ORDINARY_TYPE = 0
+VICKREY_TYPE = 1
 
 seller_key = Bytes("seller")
 nft_id_key = Bytes("nft_id")
@@ -20,7 +21,9 @@ end_round_key = Bytes("end")
 reserve_amount_key = Bytes("reserve_amount")
 lead_bid_amount_key = Bytes("1st_amount")
 lead_bid_account_key = Bytes("1st_account")
+lead_bid_deposit_key = Bytes("1st_deposit")
 second_highest_bid_amount_key = Bytes("2nd_amount")
+contract_type_key = Bytes("contract_type")
 
 commitment_local_key = Bytes("commitment")
 deposit_local_key = Bytes("deposit")
@@ -107,15 +110,60 @@ on_delete = Seq(
                 # )
                 # .Then(
 
-                # The auction was successful: send lead bid account the nft and payout seller
+                # The auction was successful:
                 Seq(
+                    # Send to the lead bid account the nft
                     closeNFTTo(
                         App.globalGet(nft_id_key),
                         App.globalGet(lead_bid_account_key),
                     ),
-                    repayAmount(
-                        App.globalGet(seller_key),
-                        App.globalGet(lead_bid_amount_key),
+                    # Refund the lead bid account the overcollaterization depending on auction type
+                    If(
+                        App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
+                    ).Then(
+                        # In case of Vickrey auction, return up to the second highest bid
+                        # Check if the return is above the min transaction fee not to lock funds because nothing can be
+                        # returned
+                        If(
+                            App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key) >=
+                            Global.min_txn_fee()
+                        ).Then(
+                            repayAmount(
+                                App.globalGet(lead_bid_account_key),
+                                App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key),
+                            ),
+                        )
+                    )
+                    .Else(
+                        # In case of ordinary auction, repay up to the highest bid
+                        # Check if the return is above the min transaction fee not to lock funds because nothing can be
+                        # returned
+                        If(
+                            App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key) >=
+                            Global.min_txn_fee()
+                        ).Then(
+                            repayAmount(
+                                App.globalGet(lead_bid_account_key),
+                                App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key),
+                            ),
+                        )
+                    ),
+                    # Payout seller - depending on auction type
+                    If(
+                        App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
+                    ).Then(
+                        # In case of Vickrey auction, payout the the second highest bid
+                        repayAmount(
+                            App.globalGet(seller_key),
+                            App.globalGet(second_highest_bid_amount_key),
+                        ),
+                    )
+                    .Else(
+                        # In case of ordinary auction type, payout the highest bid
+                        repayAmount(
+                            App.globalGet(seller_key),
+                            App.globalGet(lead_bid_amount_key),
+                        ),
                     ),
                 )
 
@@ -147,54 +195,44 @@ on_delete = Seq(
 )
 
 on_clear_state = Seq(
-    # Check if the unrevealed bid is valid, i.e. above the asking price
+    # Check if the unrevealed bid is the highest made
     If(
-        App.localGet(Txn.sender(), deposit_local_key) >= App.globalGet(reserve_amount_key)
+        App.localGet(Txn.sender(), deposit_local_key) > App.globalGet(lead_bid_amount_key)
     ).Then(
-        # Check if the unrevealed bid is the highest made
-        If(
-            App.localGet(Txn.sender(), deposit_local_key) > App.globalGet(lead_bid_amount_key)
-        ).Then(
-            Seq(
-                # Repay the previous highest bid
-                If(App.globalGet(lead_bid_account_key) != Global.zero_address()).Then(
-                    repayAmount(
-                        App.globalGet(lead_bid_account_key),
-                        App.globalGet(lead_bid_amount_key),
-                    ),
+        Seq(
+            # Repay the previous highest bid
+            If(App.globalGet(lead_bid_account_key) != Global.zero_address()).Then(
+                repayAmount(
+                    App.globalGet(lead_bid_account_key),
+                    App.globalGet(lead_bid_amount_key),
                 ),
-                # Set the previous highest bid as the 2nd highest
-                App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_amount_key)),
-                # Set the new highest bid and the leading account
-                App.globalPut(lead_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
-                App.globalPut(lead_bid_account_key, Txn.sender()),
-            )
+            ),
+            # Set the previous highest bid as the 2nd highest
+            App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_amount_key)),
+            # Set the new highest bid and the leading account
+            App.globalPut(lead_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
+            App.globalPut(lead_bid_account_key, Txn.sender()),
+            # Set the deposit belonging to the highest bid
+            App.globalPut(lead_bid_deposit_key, App.localGet(Txn.sender(), deposit_local_key)),
         )
-        .Else(
+    )
+    .Else(
+        Seq(
             # Check if the bid is 2nd highest
             If(
                 App.localGet(Txn.sender(), deposit_local_key) > App.globalGet(second_highest_bid_amount_key)
             ).Then(
                 # Set the bid as 2nd highest
                 App.globalPut(second_highest_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
+            ),
+            # Return the full bid
+            repayAmount(
+                Txn.sender(),
+                App.localGet(Txn.sender(), deposit_local_key),
             )
-            .Else(
-                # Return the full bid
-                repayAmount(
-                    Txn.sender(),
-                    App.localGet(Txn.sender(), deposit_local_key),
-                )
-            )
-        )
-    )
-    .Else(
-        # Return the full bid because it's invalid, i.e. isn't above the asking price
-        repayAmount(
-            Txn.sender(),
-            App.localGet(Txn.sender(), deposit_local_key),
         )
     ),
-    # Approve clearing out
+    # Approve clearing local state
     Approve(),
 )
 
@@ -219,7 +257,7 @@ def getRouter():
 
     @router.method(no_op=CallConfig.CREATE)
     def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64,
-                   endRound: abi.Uint64, reserve: abi.Uint64, *, output: abi.String) -> Expr:
+                   endRound: abi.Uint64, reserve: abi.Uint64, auctionType: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
             # assert intended size of ABI compound type
@@ -230,10 +268,13 @@ def getRouter():
             App.globalPut(commit_end_key, commitEnd.get()),
             App.globalPut(end_round_key, endRound.get()),
             App.globalPut(reserve_amount_key, reserve.get()),
+            App.globalPut(contract_type_key, auctionType.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
-            # Set initial bid amounts to 0
-            App.globalPut(lead_bid_amount_key, Int(INIT_BID_AMOUNT)),
-            App.globalPut(second_highest_bid_amount_key, Int(INIT_BID_AMOUNT)),
+            # Set highest and second highest bid amounts to reserve amount
+            App.globalPut(lead_bid_amount_key, reserve.get()),
+            App.globalPut(second_highest_bid_amount_key, reserve.get()),
+            # Set initial deposit amount of highest bid to zero
+            App.globalPut(lead_bid_deposit_key, Int(0)),
             # Check if rounds are correctly set
             Assert(
                 And(
@@ -241,6 +282,13 @@ def getRouter():
                     startRound.get() < commitEnd.get(),
                     commitEnd.get() < endRound.get(),
                     )
+            ),
+            # Check if auction type is correctly set
+            Assert(
+                Or(
+                    auctionType.get() == Int(ORDINARY_TYPE),
+                    auctionType.get() == Int(VICKREY_TYPE),
+                )
             ),
             output.set(seller.address())
         )
@@ -316,12 +364,9 @@ def getRouter():
                     )
             ),
             Log(Sha256(Concat(Itob(amount.get()), Itob(nonce.get())))),
-            # Check if the bid is valid, i.e. larger or equal to deposited collateral and above the asking price
+            # Check if the bid is valid, i.e. larger or equal to deposited collateral
             If(
-                And(
-                    amount.get() <= App.localGet(Txn.sender(), deposit_local_key),
-                    amount.get() >= App.globalGet(reserve_amount_key),
-                )
+                amount.get() <= App.localGet(Txn.sender(), deposit_local_key),
             ).Then(
                 # Check if the bid is the highest made
                 If(
@@ -340,37 +385,29 @@ def getRouter():
                         # Set the new highest bid and the leading account
                         App.globalPut(lead_bid_amount_key, amount.get()),
                         App.globalPut(lead_bid_account_key, Txn.sender()),
-                        # Refund the overcollateralization of the current highest bid
-                        If(
-                            App.localGet(Txn.sender(), deposit_local_key) - amount.get() >= Global.min_txn_fee(),
-                        ).Then(
-                            repayAmount(
-                                App.globalGet(lead_bid_account_key),
-                                App.localGet(Txn.sender(), deposit_local_key) - amount.get(),
-                            ),
-                        )
+                        # Set the deposit belonging to the highest bid
+                        App.globalPut(lead_bid_deposit_key, App.localGet(Txn.sender(), deposit_local_key)),
                     )
                 )
                 .Else(
-                    # Check if the bid is 2nd highest
-                    If(
-                        amount.get() > App.globalGet(second_highest_bid_amount_key)
-                    ).Then(
-                        # Set the bid as 2nd highest
-                        App.globalPut(second_highest_bid_amount_key, amount.get()),
-                    )
-                    .Else(
+                    Seq(
+                        # Check if the bid is 2nd highest
+                        If(
+                            amount.get() > App.globalGet(second_highest_bid_amount_key)
+                        ).Then(
+                            # Set the bid as 2nd highest
+                            App.globalPut(second_highest_bid_amount_key, amount.get()),
+                        ),
                         # Return the full bid
                         repayAmount(
                             Txn.sender(),
                             App.localGet(Txn.sender(), deposit_local_key),
-                        )
+                        ),
                     )
                 )
             )
             .Else(
-                # Return the full bid because it's invalid, i.e. it wasn't fully (over-)collateralized or above the
-                # asking price
+                # Return the full bid because it's invalid, i.e. it wasn't fully (over-)collateralized
                 repayAmount(
                     Txn.sender(),
                     App.localGet(Txn.sender(), deposit_local_key),
