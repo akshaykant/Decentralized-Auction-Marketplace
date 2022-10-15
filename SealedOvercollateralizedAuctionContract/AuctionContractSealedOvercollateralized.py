@@ -10,6 +10,9 @@ from util import *
 
 from pyteal import *
 
+HAS_NOT_BEEN_PAID = 0
+HAS_BEEN_PAID = 1
+
 ORDINARY_TYPE = 0
 VICKREY_TYPE = 1
 
@@ -24,6 +27,8 @@ lead_bid_account_key = Bytes("1st_account")
 lead_bid_deposit_key = Bytes("1st_deposit")
 second_highest_bid_amount_key = Bytes("2nd_amount")
 contract_type_key = Bytes("contract_type")
+seller_has_been_paid_key = Bytes("seller_paid")
+winner_has_been_paid_key = Bytes("winner_paid")
 
 commitment_local_key = Bytes("commitment")
 deposit_local_key = Bytes("deposit")
@@ -81,16 +86,17 @@ def closeAccountTo(account: Expr) -> Expr:
         )
     )
 
+
 on_delete = Seq(
+    # If the auction has not yet started, it's ok to delete it
     If(Global.round() < App.globalGet(start_round_key)).Then(
         Seq(
-            # the auction has not yet started, it's ok to delete
             Assert(
                 Or(
                     # sender must either be the seller or the auction creator
                     Txn.sender() == App.globalGet(seller_key),
                     Txn.sender() == Global.creator_address(),
-                    )
+                )
             ),
             # if the auction contract account has opted into the nft, close it out
             closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key)),
@@ -99,97 +105,18 @@ on_delete = Seq(
             Approve(),
         )
     ),
-    If(App.globalGet(end_round_key) <= Global.round()).Then(
+    # If all payouts have been made, it's ok to delete it
+    If(
+        And(
+            App.globalGet(seller_has_been_paid_key) == Int(HAS_BEEN_PAID),
+            App.globalGet(winner_has_been_paid_key) == Int(HAS_BEEN_PAID),
+        )
+    ).Then(
         Seq(
-            # the auction has ended, pay out assets
-            If(App.globalGet(lead_bid_account_key) != Global.zero_address())
-            .Then(
-                # If(
-                #     App.globalGet(lead_bid_amount_key)
-                #     >= App.globalGet(reserve_amount_key)
-                # )
-                # .Then(
-
-                # The auction was successful:
-                Seq(
-                    # Send to the lead bid account the nft
-                    closeNFTTo(
-                        App.globalGet(nft_id_key),
-                        App.globalGet(lead_bid_account_key),
-                    ),
-                    # Refund the lead bid account the overcollaterization depending on auction type
-                    If(
-                        App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
-                    ).Then(
-                        # In case of Vickrey auction, return up to the second highest bid
-                        # Check if the return is above the min transaction fee not to lock funds because nothing can be
-                        # returned
-                        If(
-                            App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key) >=
-                            Global.min_txn_fee()
-                        ).Then(
-                            repayAmount(
-                                App.globalGet(lead_bid_account_key),
-                                App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key),
-                            ),
-                        )
-                    )
-                    .Else(
-                        # In case of ordinary auction, repay up to the highest bid
-                        # Check if the return is above the min transaction fee not to lock funds because nothing can be
-                        # returned
-                        If(
-                            App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key) >=
-                            Global.min_txn_fee()
-                        ).Then(
-                            repayAmount(
-                                App.globalGet(lead_bid_account_key),
-                                App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key),
-                            ),
-                        )
-                    ),
-                    # Payout seller - depending on auction type
-                    If(
-                        App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
-                    ).Then(
-                        # In case of Vickrey auction, payout the the second highest bid
-                        repayAmount(
-                            App.globalGet(seller_key),
-                            App.globalGet(second_highest_bid_amount_key),
-                        ),
-                    )
-                    .Else(
-                        # In case of ordinary auction type, payout the highest bid
-                        repayAmount(
-                            App.globalGet(seller_key),
-                            App.globalGet(lead_bid_amount_key),
-                        ),
-                    ),
-                )
-
-                # )
-                # .Else(
-                #     Seq(
-                #         # the auction was not successful because the reserve was not met: return
-                #         # the nft to the seller and repay the lead bidder
-                #         closeNFTTo(
-                #             App.globalGet(nft_id_key), App.globalGet(seller_key)
-                #         ),
-                #         repayAmount(
-                #             App.globalGet(lead_bid_account_key),
-                #             App.globalGet(lead_bid_amount_key),
-                #         ),
-                #     )
-                # )
-            )
-            .Else(
-                # The auction was not successful because no valid bids were made
-                closeNFTTo(App.globalGet(nft_id_key), App.globalGet(seller_key))
-            ),
             # send remaining funds (i.e. all non-revealed bids) to the contract creator
             closeAccountTo(Global.creator_address()),
             Approve(),
-            )
+        ),
     ),
     Reject(),
 )
@@ -275,6 +202,9 @@ def getRouter():
             App.globalPut(second_highest_bid_amount_key, reserve.get()),
             # Set initial deposit amount of highest bid to zero
             App.globalPut(lead_bid_deposit_key, Int(0)),
+            # Mark that neither seller nor winner have been paid
+            App.globalPut(seller_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
+            App.globalPut(winner_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             # Check if rounds are correctly set
             Assert(
                 And(
@@ -415,6 +345,111 @@ def getRouter():
             ),
             # Delete local deposit
             App.localDel(Txn.sender(), deposit_local_key),
+            Approve(),
+        )
+
+    @router.method(no_op=CallConfig.CALL)
+    def paySeller():
+        return Seq(
+            Assert(
+                And(
+                    # Check if the auction has ended
+                    App.globalGet(end_round_key) <= Global.round(),
+                    # Check if the sender is the seller - i.e. wants the payout
+                    Txn.sender() == App.globalGet(seller_key),
+                    # Check if the seller hasn't been paid yet
+                    App.globalGet(seller_has_been_paid_key) == Int(HAS_NOT_BEEN_PAID),
+                )
+            ),
+            # Check if auction received any valid bids
+            If(
+                App.globalGet(lead_bid_account_key) != Global.zero_address()
+            ).Then(
+                # Auction was successful => pay out the seller depending on auction type
+                If(
+                    App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
+                ).Then(
+                    # In case of Vickrey auction, payout the the second highest bid
+                    repayAmount(
+                        App.globalGet(seller_key),
+                        App.globalGet(second_highest_bid_amount_key),
+                    ),
+                )
+                .Else(
+                    # In case of ordinary auction type, payout the highest bid
+                    repayAmount(
+                        App.globalGet(seller_key),
+                        App.globalGet(lead_bid_amount_key),
+                    )
+                )
+            )
+            .Else(
+                # Auction was not successful because no valid bids were received => return the NFT to the seller
+                # Note: if seller has opted-out of the NFT, the Tx will fail and NFT will remain in the smart contract
+                # until it has been retrieved.
+                closeNFTTo(
+                    App.globalGet(nft_id_key),
+                    App.globalGet(seller_key)
+                ),
+            ),
+            # Mark that the seller has been paid
+            App.globalPut(seller_has_been_paid_key, Int(HAS_BEEN_PAID)),
+            Approve(),
+        )
+
+    @router.method(no_op=CallConfig.CALL)
+    def payWinner():
+        return Seq(
+            Assert(
+                And(
+                    # Check if the auction has ended
+                    App.globalGet(end_round_key) <= Global.round(),
+                    # Check if the sender is the winner - i.e. wants the payout
+                    Txn.sender() == App.globalGet(lead_bid_account_key),
+                    # Check if the winner hasn't been paid yet
+                    App.globalGet(winner_has_been_paid_key) == Int(HAS_NOT_BEEN_PAID),
+                )
+            ),
+            # Send the NFT to the winner
+            # Note: if winner isn't opted-in the NFT, the Tx will fail and NFT will remain in the smart contract
+            # until it has been claimed.
+            closeNFTTo(
+                App.globalGet(nft_id_key),
+                App.globalGet(lead_bid_account_key)
+            ),
+            # Refund the winner the overcollaterization depending on auction type
+            If(
+                App.globalGet(contract_type_key) == Int(VICKREY_TYPE)
+            ).Then(
+                # In case of Vickrey auction, return up to the second highest bid
+                # Check if the return is above the min transaction fee not to lock funds because nothing can be
+                # returned in this case
+                If(
+                    App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key) >=
+                    Global.min_txn_fee()
+                ).Then(
+                    repayAmount(
+                        App.globalGet(lead_bid_account_key),
+                        App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key),
+                    ),
+                )
+            )
+            .Else(
+                # In case of ordinary auction, repay up to the highest bid
+                # Check if the return is above the min transaction fee not to lock funds because nothing can be
+                # returned in this case
+                If(
+                    App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key) >=
+                    Global.min_txn_fee()
+                ).Then(
+                    repayAmount(
+                        App.globalGet(lead_bid_account_key),
+                        App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key),
+                    ),
+                )
+            ),
+            # Mark that the winner has been paid
+            App.globalPut(winner_has_been_paid_key, Int(HAS_BEEN_PAID)),
             Approve(),
         )
 
