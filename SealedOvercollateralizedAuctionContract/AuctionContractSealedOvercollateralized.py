@@ -27,6 +27,7 @@ lead_bid_account_key = Bytes("1st_account")
 lead_bid_deposit_key = Bytes("1st_deposit")
 second_highest_bid_amount_key = Bytes("2nd_amount")
 contract_type_key = Bytes("contract_type")
+service_fee_key = Bytes("service_fee")
 seller_has_been_paid_key = Bytes("seller_paid")
 winner_has_been_paid_key = Bytes("winner_paid")
 
@@ -184,7 +185,8 @@ def getRouter():
 
     @router.method(no_op=CallConfig.CREATE)
     def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64,
-                   endRound: abi.Uint64, reserve: abi.Uint64, auctionType: abi.Uint64, *, output: abi.String) -> Expr:
+                   endRound: abi.Uint64, reserve: abi.Uint64, auctionType: abi.Uint64, serviceFee: abi.Uint64, *,
+                   output: abi.String) -> Expr:
 
         return Seq(
             # assert intended size of ABI compound type
@@ -196,6 +198,7 @@ def getRouter():
             App.globalPut(end_round_key, endRound.get()),
             App.globalPut(reserve_amount_key, reserve.get()),
             App.globalPut(contract_type_key, auctionType.get()),
+            App.globalPut(service_fee_key, serviceFee.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
             # Set highest and second highest bid amounts to reserve amount
             App.globalPut(lead_bid_amount_key, reserve.get()),
@@ -372,14 +375,34 @@ def getRouter():
                     # In case of Vickrey auction, payout the the second highest bid
                     repayAmount(
                         App.globalGet(seller_key),
-                        App.globalGet(second_highest_bid_amount_key),
+                        # Charge service fees through equation: X-fee*(X/100) to prevent overflows
+                        Minus(
+                            App.globalGet(second_highest_bid_amount_key),
+                            Mul(
+                                App.globalGet(service_fee_key),
+                                Div(
+                                    App.globalGet(second_highest_bid_amount_key),
+                                    Int(100)
+                                )
+                            )
+                        ),
                     ),
                 )
                 .Else(
                     # In case of ordinary auction type, payout the highest bid
                     repayAmount(
                         App.globalGet(seller_key),
-                        App.globalGet(lead_bid_amount_key),
+                        # Charge service fees through equation: X-fee*(X/100) to prevent overflows
+                        Minus(
+                            App.globalGet(lead_bid_amount_key),
+                            Mul(
+                                App.globalGet(service_fee_key),
+                                Div(
+                                    App.globalGet(lead_bid_amount_key),
+                                    Int(100)
+                                )
+                            )
+                        ),
                     )
                 )
             )

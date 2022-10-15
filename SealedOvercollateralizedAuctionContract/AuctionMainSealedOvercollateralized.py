@@ -255,6 +255,7 @@ def createAuctionApp(
         endRound: int,
         reserve: int,
         auction_type: int,
+        serviceFee: int,
 ):
     # declare application state storage (immutable)
     local_ints = 1
@@ -296,7 +297,8 @@ def createAuctionApp(
         commitRound,
         endRound,
         reserve,
-        auction_type
+        auction_type,
+        serviceFee
     ]
 
     atc = AtomicTransactionComposer()
@@ -398,9 +400,10 @@ def main():
     # print("Bob is creating an auction that lasts 30 seconds to auction off the NFT...")
     print("Bob is creating a sealed auction for the NFT with commit period lasting {} rounds \
         and revealing period lasting {}".format(commitDurationRounds, revealDurationRounds))
+    serviceFee = 2  # percentage number of fee with respect to winning bid, paid to the contract creator
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
                                         seller, nftID, startRound, commitEndRound,
-                                        endRound, reserve, auction_type)
+                                        endRound, reserve, auction_type, serviceFee)
 
     print("AppID is", app_id)
     print("--------------------------------------------")
