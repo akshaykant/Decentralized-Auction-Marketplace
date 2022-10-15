@@ -154,14 +154,11 @@ def getRouter():
             App.globalPut(reserve_amount_key, reserve.get()),
             App.globalPut(min_bid_increment_key, minBidIncrement.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
-<<<<<<< HEAD
             App.globalPut(service_fee_key, serviceFee.get()),
-=======
             # Mark that neither seller nor winner have been paid
             App.globalPut(seller_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             App.globalPut(winner_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             # Check if rounds are correctly set
->>>>>>> main
             Assert(
                 And(
                     Global.round() < startRound.get(),
@@ -254,7 +251,8 @@ def getRouter():
                 # Auction was successful => pay out the seller
                 repayAmount(
                     App.globalGet(seller_key),
-                    App.globalGet(lead_bid_amount_key),
+                    # App.globalGet(lead_bid_amount_key),
+                    Minus(App.globalGet(lead_bid_amount_key),Mul(App.globalGet(service_fee_key),Div(App.globalGet(lead_bid_amount_key),Int(100)))), # this formula so no float numbers
                 )
             )
             .Else(
