@@ -11,6 +11,68 @@ from algosdk.atomic_transaction_composer import AtomicTransactionComposer
 from algosdk.abi import Contract, Method
 from algosdk.logic import get_application_address
 
+def claimWinner(
+        client: algod.AlgodClient,
+        app_id: int,
+        winner_sk: str
+) -> None:
+    global_state = read_global_state(client, app_id)
+    nft_id = global_state['nft_id']
+
+    suggestedParams = client.suggested_params()
+
+    atc = AtomicTransactionComposer()
+    winner_addr = account.address_from_private_key(winner_sk)
+    winner_signer = AccountTransactionSigner(winner_sk)
+
+    with open("../test_contract.json") as f:
+        js = f.read()
+
+    atc.add_method_call(app_id=app_id,
+                        method=get_method('payWinner', js),
+                        sender=winner_addr,
+                        sp=suggestedParams,
+                        signer=winner_signer,
+                        foreign_assets=[nft_id],
+                        )
+
+    result = atc.execute(client, 10)
+
+    global_state = read_global_state(client, app_id)
+    winnerClaimed = global_state['winner_paid']
+    print("Winner claimed: ", winnerClaimed)
+
+def claimSeller(
+        client: algod.AlgodClient,
+        app_id: int,
+        seller_sk: str
+) -> None:
+    global_state = read_global_state(client, app_id)
+    nft_id = global_state['nft_id']
+
+    suggestedParams = client.suggested_params()
+
+    atc = AtomicTransactionComposer()
+    seller_addr = account.address_from_private_key(seller_sk)
+    seller_signer = AccountTransactionSigner(seller_sk)
+
+    with open("../test_contract.json") as f:
+        js = f.read()
+
+    atc.add_method_call(app_id=app_id,
+                        method=get_method('paySeller', js),
+                        sender=seller_addr,
+                        sp=suggestedParams,
+                        signer=seller_signer,
+                        foreign_assets=[nft_id],
+                        )
+
+    result = atc.execute(client, 10)
+
+    global_state = read_global_state(client, app_id)
+    sellerClaimed = global_state['seller_paid']
+    print("Seller claimed: ", sellerClaimed)
+
 def closeAuction(
         client: algod.AlgodClient,
         app_id: int,
@@ -149,7 +211,7 @@ def createAuctionApp(
     # declare application state storage (immutable)
     local_ints = 0
     local_bytes = 0
-    global_ints = 8
+    global_ints = 10
     global_bytes = 2
     global_schema = transaction.StateSchema(global_ints, global_bytes)
     local_schema = transaction.StateSchema(local_ints, local_bytes)
@@ -290,15 +352,42 @@ def main():
 
     print("--------------------------------------------")
     print("Bidding the Auction application......")
-    placeBid(algod_client, app_id, bidder_sk, int(1.1*reserve))
-    optInToAsset(algod_client, nftID, bidder_sk)
+    placeBid(algod_client, app_id, bidder_sk, reserve)
 
     waitUntilRound(algod_client, endRound)
 
     print("--------------------------------------------")
     print("Closing the Auction application......")
+    try:
+        closeAuction(algod_client, app_id, seller_sk)
+    except error.AlgodHTTPError as e:
+        print("Payouts not distributed")
+        print(e)
 
-    closeAuction(algod_client, app_id, seller_sk)
+    print("Winner claiming the NFT......")
+    try:
+        claimWinner(algod_client, app_id, bidder_sk)
+    except error.AlgodHTTPError as e:
+        print("Error - winner not opted-in NTF: ")
+        print(e)
+
+    print("Seller claiming the payout......")
+    claimSeller(algod_client, app_id, seller_sk)
+
+    currentRound = algod_client.status().get('last-round')
+    waitUntilRound(algod_client, currentRound + 1)
+
+    print("Winner opting in the NFT......")
+    optInToAsset(algod_client, nftID, bidder_sk)
+
+    print("Winner claiming the NFT......")
+    claimWinner(algod_client, app_id, bidder_sk)
+
+    currentRound = algod_client.status().get('last-round')
+    waitUntilRound(algod_client, currentRound + 1)
+
+    print("Closing the Auction application......")
+    closeAuction(algod_client, app_id, creator_private_key)
 
 if __name__ == "__main__":
     main()
