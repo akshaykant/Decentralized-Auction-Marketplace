@@ -21,6 +21,7 @@ min_bid_increment_key = Bytes("min_bid_inc")
 num_bids_key = Bytes("num_bids")
 lead_bid_amount_key = Bytes("bid_amount")
 lead_bid_account_key = Bytes("bid_account")
+service_fee_key = Bytes("service_fee")
 seller_has_been_paid_key = Bytes("seller_paid")
 winner_has_been_paid_key = Bytes("winner_paid")
 
@@ -143,7 +144,7 @@ def getRouter():
 
     @router.method(no_op=CallConfig.CREATE)
     def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, endRound: abi.Uint64, reserve: abi.Uint64,
-                   minBidIncrement: abi.Uint64, *, output: abi.String) -> Expr:
+                   minBidIncrement: abi.Uint64, serviceFee: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
             App.globalPut(seller_key, seller.address()),
@@ -153,6 +154,7 @@ def getRouter():
             App.globalPut(reserve_amount_key, reserve.get()),
             App.globalPut(min_bid_increment_key, minBidIncrement.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
+            App.globalPut(service_fee_key, serviceFee.get()),
             # Mark that neither seller nor winner have been paid
             App.globalPut(seller_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             App.globalPut(winner_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
@@ -249,7 +251,17 @@ def getRouter():
                 # Auction was successful => pay out the seller
                 repayAmount(
                     App.globalGet(seller_key),
-                    App.globalGet(lead_bid_amount_key),
+                    # Equation: X-fee*(X/100) to prevent overflows
+                    Minus(
+                        App.globalGet(lead_bid_amount_key),
+                        Mul(
+                            App.globalGet(service_fee_key),
+                            Div(
+                                App.globalGet(lead_bid_amount_key),
+                                Int(100)
+                            )
+                        )
+                    ),
                 )
             )
             .Else(

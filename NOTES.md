@@ -30,3 +30,7 @@ By doing things this way you don't have to change any hardcoded variable. The mn
 with open('mnemonic.txt','r') as f:
     creator_mnemonic = f.read()
 ```
+
+## Rounds
+
+## Fees

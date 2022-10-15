@@ -206,11 +206,12 @@ def createAuctionApp(
         endRound: int,
         reserve: int,
         minBidIncrement: int,
+        serviceFee: int
 ) -> int:
     # declare application state storage (immutable)
     local_ints = 0
     local_bytes = 0
-    global_ints = 9
+    global_ints = 10
     global_bytes = 2
     global_schema = transaction.StateSchema(global_ints, global_bytes)
     local_schema = transaction.StateSchema(local_ints, local_bytes)
@@ -250,6 +251,7 @@ def createAuctionApp(
         endRound,
         reserve,
         minBidIncrement,
+        serviceFee,
     ]
 
     atc = AtomicTransactionComposer()
@@ -290,17 +292,19 @@ def main():
         creator_mnemonic = f.read()
     creator_private_key = get_private_key_from_mnemonic(creator_mnemonic)
     creator_address = account.address_from_private_key(creator_private_key)
-    print(creator_address)
+    print("creator address: ",creator_address)
 
     # initialize an algodClient
     algod_client = algod.AlgodClient(algod_token, algod_address)
     seller_sk = account.generate_account()[0]
     seller = account.address_from_private_key(seller_sk)
+    print("seller address: ",seller)
 
     bidder_sk = account.generate_account()[0]
     bidder = account.address_from_private_key(bidder_sk)
-    print(seller)
+    print("bidder address: ",bidder)
 
+    print("sending 1Algo to seller")
     txn = transaction.PaymentTxn(
         sender=creator_address,
         receiver=seller,
@@ -311,10 +315,11 @@ def main():
     algod_client.send_transaction(signedTxn)
     transaction.wait_for_confirmation(algod_client, signedTxn.get_txid())
 
+    print("sending 1Algo to bidder")
     txn = transaction.PaymentTxn(
         sender=creator_address,
         receiver=bidder,
-        amt=10000000,
+        amt=12000000,
         sp=algod_client.suggested_params(),
     )
     signedTxn = txn.sign(creator_private_key)
@@ -333,9 +338,10 @@ def main():
     increment = 100_000  # 0.1 Algo
     print("Bob is creating an auction that lasts {} rounds to auction off the NFT...".format(durationRounds))
 
+    serviceFee = 2  # percentage number of fee with respect to winning bid, paid to the contract creator
     app_id, contract = createAuctionApp(algod_client, creator_private_key,
                                         seller, nftID, startRound,
-                                        endRound, reserve, increment)
+                                        endRound, reserve, increment, serviceFee)
 
     print("AppId is", app_id)
     print("--------------------------------------------")
