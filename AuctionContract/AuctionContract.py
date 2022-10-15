@@ -251,8 +251,17 @@ def getRouter():
                 # Auction was successful => pay out the seller
                 repayAmount(
                     App.globalGet(seller_key),
-                    # App.globalGet(lead_bid_amount_key),
-                    Minus(App.globalGet(lead_bid_amount_key),Mul(App.globalGet(service_fee_key),Div(App.globalGet(lead_bid_amount_key),Int(100)))), # this formula so no float numbers
+                    # Equation: X-fee*(X/100) to prevent overflows
+                    Minus(
+                        App.globalGet(lead_bid_amount_key),
+                        Mul(
+                            App.globalGet(service_fee_key),
+                            Div(
+                                App.globalGet(lead_bid_amount_key),
+                                Int(100)
+                            )
+                        )
+                    ),
                 )
             )
             .Else(
