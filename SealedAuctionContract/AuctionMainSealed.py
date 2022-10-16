@@ -84,6 +84,14 @@ def closeAuction(
         app_id: int,
         closer: str,
 ):
+    """Close an auction.
+    - Args:
+        - client: An Algod client.
+        - app_id: The app ID of the auction.
+        - closer: The account initiating the close transaction. This must be
+        either the seller or auction creator if you wish to close the auction
+        before it starts. Otherwise, this can be any account.
+    """
     app_addr = client.application_info(app_id).get('params').get('creator')
 
     global_state = read_global_state(client, app_id)
@@ -119,6 +127,14 @@ def placeBid(
         bid_amount: int,
         nonce: int
 ) -> None:
+    """Place a bid on an active auction.
+    - Args:
+        - client: An Algod client.
+        - app_id: The app ID of the auction.
+        - bidder_sk: The account providing the bid.
+        - bidAmount: The amount of the bid.
+        - nonce: the nonce used to create the commitment
+    """
     app_addr = get_application_address(app_id)
 
     suggestedParams = client.suggested_params()
@@ -278,6 +294,23 @@ def createAuctionApp(
         auction_type: int,
         serviceFee: int,
 ):
+    """Create a new auction.
+        - Args:
+            - algod_client: An algod client.
+            - senderSK: The account's secret key that will create the auction application.
+            - seller: The address of the seller that currently holds the NFT being auctioned.
+            - nftID: The ID of the NFT being auctioned.
+            - startRound: the round representing the start time of the auction.  This must be greater than the current UNIX timestamp.
+            - endTime: the round representing the end time of the auction. This must be greater than startRound.
+            - reserve: The reserve amount of the auction. If the auction ends without a bid that is equal to or greater than this amount, the auction will fail, meaning the bid amount will be refunded to the lead bidder and the NFT will return to the seller.
+            - minBidIncrement: The minimum different required between a new bid and the current leading bid.
+            - deposit: amount to deposit to take part to the auction
+            - auction_type: ORDINARY_TYPE or VICKREY_TYPE 
+            - serviceFee: percentage of winning bid that goes to the creator of the auction (eg 2 for a 2% service fee)
+        - Returns:
+            - appId: The ID of the newly created auction app.
+            - contract: a Python SDK Contract object to allow clients to make off-chain calls
+        """
     # declare application state storage (immutable)
     local_ints = 1
     local_bytes = 1
