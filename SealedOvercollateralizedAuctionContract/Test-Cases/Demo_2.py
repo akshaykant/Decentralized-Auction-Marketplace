@@ -1,18 +1,17 @@
-# Description of demo 1:
+# Description of demo 2:
 #  This script demonstrates a case of a Vickrey style auction with overcollateralization.
-#  Three bidders compete for a  NFT. Only one bidder creates a valid bid - i.e. above the asking price and
-#  overcollateralized. One bidder creates an overcollateralized bid but below the asking price. The third bidder creates
-#  a bid above the asking price but does not deposit sufficient collateral.
-#  All bidders reveal their bids during the reveal phase. The two invalid bidders get refunded their deposits.
-#  When the auction ends, the contract is tried to be deleted. This action fails because the assets have not yet been
-#  claimed by the seller and by the winner.
-#  The winner tries then to claim the NFT. The action fails because the winning account is not opted into the NFT.
-#  The seller successfully claims the payment. A service fee is deducted from that amount (which remains in the contract
-#  account).
-#  The winner opts in the NFT and claims it from the contract. Because of the Vickrey auction, the winner pays only the
-#  amount of the second bid, thus gets the difference between their deposit and the second highest valid bid refunded.
-#  Since the other two bids made were invalid, the asking price is considered as the second highest valid bid.
-#  The contract is finally deleted and the remaining funds (including the service fee) send to the contract creator.
+#  Three bidders compete for a NFT. All create valid bids - i.e. above the asking price and overcollateralized.
+#  The bid amounts of the first and second bidder are identical, just different collaterals are deposited.
+#  The first bidder does not deposit any additional collateral above the bid amount.
+#  The second one bidder deposits extra collateral to obfuscate their bid amount.
+#  The third bidder deposits even more collateral than the second one but their bid is smaller than the other two.
+#  All bidders reveal their bids during the reveal phase.
+#  The one of the two bidders with equal bid amounts that first reveals the bid wins the NFT.
+#  Other two bidders get their collateral refunded.
+#  The winner opts in the NFT and claims it.
+#  The winner does not get anything refunded because the second bid is equal to their deposited collateral.
+#  The seller claims the payment. A service fee is deducted from that amount (which remains in the contract account).
+#  The contract is deleted and the remaining funds (including the service fee) send to the contract creator.
 
 # -----------------           Imports          -----------------
 from random import randrange, seed
@@ -28,7 +27,7 @@ with open('../../mnemonic.txt', 'r') as f:
 NUM_BID_ACCS = 3
 
 # Algod connection parameters. Node must have EnableDeveloperAPI set to true in its config
-algod_address = "http://localhost:4001"  # "https://node.testnet.algoexplorerapi.io"
+algod_address = "https://node.testnet.algoexplorerapi.io"  # "http://localhost:4001"  # "https://node.testnet.algoexplorerapi.io"
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 # Auction type. Possible options:
@@ -43,10 +42,10 @@ AMT = 1_000_000
 RESERVE = 100_000
 
 # Bids of account (in microAlgo)
-BID_AMOUNTS = [200_000, 150_000, 350_000]
+BID_AMOUNTS = [200_000, 200_000, 150_000]
 
 # Deposits, i.e. collateralization of bids, for each account (in microAlgo)
-DEPOSITS = [300_000, 90_000, 110_000]
+DEPOSITS = [200_000, 290_000, 410_000]
 
 # Fee taken by the contract creator as percentage of the winning bid
 SERVICE_FEE = 2
@@ -64,13 +63,13 @@ BLOCK_TIME = 3.9
 
 # Starting auction time - defined as seconds from time when all relevant accounts have been set.
 # The seconds are rounded to closest block number.
-TIME_TO_AUCTION = 20  # 40
+TIME_TO_AUCTION = 40  # 20  # 40
 # Duration of the commit phase of the auction (in seconds).
 # The seconds are rounded to closest block number.
-COMMIT_DURATION = 25  # 45
+COMMIT_DURATION = 45  # 25  # 45
 # Duration of the bid reveal (i.e. opening) phase of the auction (in seconds).
 # The seconds are rounded to closest block number.
-REVEAL_DURATION = 21  # 41
+REVEAL_DURATION = 41  # 21  # 41
 
 
 # ---------------------------------------------------------------
@@ -154,31 +153,8 @@ def main():
     waitUntilRound(algod_client, endRound)
     print("Auction ended.")
     print("--------------------------------------------")
-    print("Trying to close the auction application ...")
-    try:
-        closeAuction(algod_client, app_id, seller_sk)
-    except error.AlgodHTTPError as e:
-        print("\tCan't close the auction because payouts not distributed")
-        print("\tError:" + str(e))
-
-    print("Winner trying to claim the NFT ...")
-    winner_sk, winner_addr = getWinner(algod_client, app_id, bidders_sk, bidders)
-    try:
-        claimWinner(algod_client, app_id, winner_sk)
-    except error.AlgodHTTPError as e:
-        print("\tCan't close the auction because payouts not distributed")
-        print("\tError - winner not opted-in NTF: ")
-        print("\tError:" + str(e))
-
-    print("Seller claiming the payout......")
-    claimSeller(algod_client, app_id, seller_sk)
-    print("Seller claimed the NFT.")
-
-    # Wait for one round for easier inspection of app state with Sandbox
-    currentRound = algod_client.status().get('last-round')
-    waitUntilRound(algod_client, currentRound+1)
-
     print("Winner opting in the NFT ...")
+    winner_sk, winner_addr = getWinner(algod_client, app_id, bidders_sk, bidders)
     optInToAsset(algod_client, nftID, winner_sk)
     print("Winner opted in the NFT.")
 
@@ -186,11 +162,15 @@ def main():
     claimWinner(algod_client, app_id, winner_sk)
     print("Winner claimed the NFT.")
 
+    print("Seller claiming the payout ...")
+    claimSeller(algod_client, app_id, seller_sk)
+    print("Seller claimed the NFT.")
+
     # Wait for one round for easier inspection of app state with Sandbox
     currentRound = algod_client.status().get('last-round')
     waitUntilRound(algod_client, currentRound + 1)
 
-    print("Closing the auction application......")
+    print("Closing the auction application ...")
     closeAuction(algod_client, app_id, creator_private_key)
     print("Application closed. Remaining funds returned to the contract creator.")
 

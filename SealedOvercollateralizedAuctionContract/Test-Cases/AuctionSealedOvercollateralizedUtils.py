@@ -12,8 +12,8 @@ from algosdk.logic import get_application_address
 def getWinner(
         client: algod.AlgodClient,
         app_id: int,
-        bidders_sk: str,
-        bidders_addr: str,
+        bidders_sk: List[str],
+        bidders_addr: List[str],
 ):
     global_state = read_global_state(client, app_id)
 
