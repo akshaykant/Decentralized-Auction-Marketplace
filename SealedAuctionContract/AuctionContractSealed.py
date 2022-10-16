@@ -13,6 +13,9 @@ from pyteal import *
 HAS_NOT_BEEN_PAID = 0
 HAS_BEEN_PAID = 1
 
+ORDINARY_TYPE = 0
+VICKREY_TYPE = 1
+
 seller_key = Bytes("seller")
 nft_id_key = Bytes("nft_id")
 commit_end_key = Bytes("commit")
@@ -23,7 +26,9 @@ min_bid_increment_key = Bytes("min_bid_inc")
 num_bids_key = Bytes("num_bids")
 lead_bid_amount_key = Bytes("bid_amount")
 lead_bid_account_key = Bytes("bid_account")
+second_highest_bid_amount_key = Bytes("2nd_amount")
 deposit_value_key = Bytes("deposit")
+auction_type_key = Bytes("auction_type")
 service_fee_key = Bytes("service_fee")
 seller_has_been_paid_key = Bytes("seller_paid")
 winner_has_been_paid_key = Bytes("winner_paid")
@@ -150,7 +155,7 @@ def getRouter():
     # Main router class
     router = Router(
         # Name of the contract
-        "AuctionContract",
+        "SealedAuctionContract",
         # What to do for each on-complete type when no arguments are passed (bare call)
         BareCallActions(
             # On create only, just approve
@@ -163,8 +168,9 @@ def getRouter():
 
 
     @router.method(no_op=CallConfig.CREATE)
-    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64, endRound: abi.Uint64, reserve: abi.Uint64,
-                   minBidIncrement: abi.Uint64, deposit: abi.Uint64,serviceFee: abi.Uint64, *, output: abi.String) -> Expr:
+    def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64, commitEnd: abi.Uint64,
+                   endRound: abi.Uint64, reserve: abi.Uint64, minBidIncrement: abi.Uint64, deposit: abi.Uint64,
+                   auctionType: abi.Uint64, serviceFee: abi.Uint64, *, output: abi.String) -> Expr:
 
         return Seq(
             # assert intended size of ABI compound type
@@ -177,8 +183,12 @@ def getRouter():
             App.globalPut(reserve_amount_key, reserve.get()),
             App.globalPut(min_bid_increment_key, minBidIncrement.get()),
             App.globalPut(lead_bid_account_key, Global.zero_address()),
+            App.globalPut(auction_type_key, auctionType.get()),
             App.globalPut(service_fee_key, serviceFee.get()),
             App.globalPut(deposit_value_key, deposit.get()),
+            # Set highest and second highest bid amounts to reserve amount
+            App.globalPut(lead_bid_amount_key, reserve.get()),
+            App.globalPut(second_highest_bid_amount_key, reserve.get()),
             # Mark that neither seller nor winner have been paid
             App.globalPut(seller_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             App.globalPut(winner_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
@@ -190,12 +200,20 @@ def getRouter():
                     commitEnd.get() < endRound.get(),
                     )
             ),
+            # Check if auction type is correctly set
+            Assert(
+                Or(
+                    auctionType.get() == Int(ORDINARY_TYPE),
+                    auctionType.get() == Int(VICKREY_TYPE),
+                )
+            ),
             output.set(seller.address())
         )
 
     @router.method(no_op=CallConfig.CALL)
     def on_setup():
         return Seq(
+            # Check if auction hasn't yet started
             Assert(Global.round() < App.globalGet(start_round_key)),
             # opt into NFT asset -- because you can't opt in if you're already opted in, this is what
             # we'll use to make sure the contract has been set up
@@ -218,7 +236,6 @@ def getRouter():
             Global.current_application_address(), App.globalGet(nft_id_key)
         )
 
-
         return Seq(
             # assert intended size of ABI compound type for commitment
             Assert(Len(commitment.get()) == Int(32)),
@@ -230,10 +247,10 @@ def getRouter():
                 # the auction is in the commit phase
                 Global.round() >= App.globalGet(start_round_key),
                 Global.round() < App.globalGet(commit_end_key),
+                # Check if app call is accompanied by a payment transaction in the same group for deposit
                 Gtxn[on_commit_txn_index].type_enum() == TxnType.Payment,
                 Gtxn[on_commit_txn_index].sender() == Txn.sender(),
-                Gtxn[on_commit_txn_index].receiver()
-                    == Global.current_application_address(),
+                Gtxn[on_commit_txn_index].receiver() == Global.current_application_address(),
                 Gtxn[on_commit_txn_index].amount() == App.globalGet(deposit_value_key)
             )),
             App.localPut(Gtxn[on_commit_txn_index].sender(), commitment_local_key, commitment.get())
@@ -260,8 +277,7 @@ def getRouter():
                     # the actual bid payment is before the app call
                     Gtxn[on_bid_txn_index].type_enum() == TxnType.Payment,
                     Gtxn[on_bid_txn_index].sender() == Txn.sender(),
-                    Gtxn[on_bid_txn_index].receiver()
-                        == Global.current_application_address(),
+                    Gtxn[on_bid_txn_index].receiver() == Global.current_application_address(),
 
                     # need Concat(byte1,byte2) to check multiple bytes
                     Sha256(Concat(
@@ -274,6 +290,7 @@ def getRouter():
             repayDeposit(Txn.sender()),
             App.localDel(Gtxn[on_bid_txn_index].sender(), commitment_local_key),
             App.localPut(Gtxn[on_bid_txn_index].sender(), value_local_key, Gtxn[on_bid_txn_index].amount()),
+            # Check if the bid is the highest made
             If(
                 Gtxn[on_bid_txn_index].amount()
                 >= App.globalGet(lead_bid_amount_key) + App.globalGet(min_bid_increment_key)
@@ -285,11 +302,23 @@ def getRouter():
                             App.globalGet(lead_bid_amount_key),
                         )
                     ),
+                    # Set the previous highest bid as the 2nd highest
+                    App.globalPut(second_highest_bid_amount_key, App.globalGet(lead_bid_amount_key)),
+                    # Set the new highest bid and the leading account
                     App.globalPut(lead_bid_amount_key, Gtxn[on_bid_txn_index].amount()),
                     App.globalPut(lead_bid_account_key, Gtxn[on_bid_txn_index].sender()),
                     App.globalPut(num_bids_key, App.globalGet(num_bids_key) + Int(1)),
                     Approve(),
                 )
+            )
+            .Else(
+                # Check if the bid is 2nd highest
+                If(
+                    Gtxn[on_bid_txn_index].amount() > App.globalGet(second_highest_bid_amount_key)
+                ).Then(
+                    # Set the bid as 2nd highest
+                    App.globalPut(second_highest_bid_amount_key, Gtxn[on_bid_txn_index].amount()),
+                ),
             ),
             Reject(),
         )
@@ -311,20 +340,42 @@ def getRouter():
             If(
                 App.globalGet(lead_bid_account_key) != Global.zero_address()
             ).Then(
-                # Auction was successful => pay out the seller
-                repayAmount(
-                    App.globalGet(seller_key),
-                    # Equation: X-fee*(X/100) to prevent overflows
-                    Minus(
-                        App.globalGet(lead_bid_amount_key),
-                        Mul(
-                            App.globalGet(service_fee_key),
-                            Div(
-                                App.globalGet(lead_bid_amount_key),
-                                Int(100)
+                # Auction was successful => pay out the seller depending on auction type
+                If(
+                    App.globalGet(auction_type_key) == Int(VICKREY_TYPE)
+                ).Then(
+                    # In case of Vickrey auction, payout the the second highest bid
+                    repayAmount(
+                        App.globalGet(seller_key),
+                        # Charge service fees through equation: X-fee*(X/100) to prevent overflows
+                        Minus(
+                            App.globalGet(second_highest_bid_amount_key),
+                            Mul(
+                                App.globalGet(service_fee_key),
+                                Div(
+                                    App.globalGet(second_highest_bid_amount_key),
+                                    Int(100)
+                                )
                             )
-                        )
+                        ),
                     ),
+                )
+                .Else(
+                    # In case of ordinary auction type, payout the highest bid
+                    repayAmount(
+                        App.globalGet(seller_key),
+                        # Charge service fees through equation: X-fee*(X/100) to prevent overflows
+                        Minus(
+                            App.globalGet(lead_bid_amount_key),
+                            Mul(
+                                App.globalGet(service_fee_key),
+                                Div(
+                                    App.globalGet(lead_bid_amount_key),
+                                    Int(100)
+                                )
+                            )
+                        ),
+                    )
                 )
             )
             .Else(
@@ -360,6 +411,22 @@ def getRouter():
             closeNFTTo(
                 App.globalGet(nft_id_key),
                 App.globalGet(lead_bid_account_key)
+            ),
+            # In case of Vickrey auction type, return to the winner the difference to the second highest bid
+            If(
+                App.globalGet(auction_type_key) == Int(VICKREY_TYPE)
+            ).Then(
+                # Check if the return is above the min transaction fee not to lock funds because nothing can be
+                # returned in this case
+                If(
+                    App.globalGet(lead_bid_amount_key) - App.globalGet(second_highest_bid_amount_key) >=
+                    Global.min_txn_fee()
+                ).Then(
+                    repayAmount(
+                        App.globalGet(lead_bid_account_key),
+                        App.globalGet(lead_bid_amount_key) - App.globalGet(second_highest_bid_amount_key),
+                    ),
+                )
             ),
             # Mark that the winner has been paid
             App.globalPut(winner_has_been_paid_key, Int(HAS_BEEN_PAID)),
