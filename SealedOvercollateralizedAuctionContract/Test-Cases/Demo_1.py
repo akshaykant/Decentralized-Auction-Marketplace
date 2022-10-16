@@ -28,7 +28,7 @@ with open('../../mnemonic.txt', 'r') as f:
 NUM_BID_ACCS = 3
 
 # Algod connection parameters. Node must have EnableDeveloperAPI set to true in its config
-algod_address = "http://localhost:4001"
+algod_address = "https://node.testnet.algoexplorerapi.io"  # "http://localhost:4001"
 algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 
 # Auction type. Possible options:
@@ -64,13 +64,13 @@ BLOCK_TIME = 3.9
 
 # Starting auction time - defined as seconds from time when all relevant accounts have been set.
 # The seconds are rounded to closest block number.
-TIME_TO_AUCTION = 20
+TIME_TO_AUCTION = 40
 # Duration of the commit phase of the auction (in seconds).
 # The seconds are rounded to closest block number.
-COMMIT_DURATION = 25
+COMMIT_DURATION = 45
 # Duration of the bid reveal (i.e. opening) phase of the auction (in seconds).
 # The seconds are rounded to closest block number.
-REVEAL_DURATION = 21
+REVEAL_DURATION = 41
 
 
 # ---------------------------------------------------------------
