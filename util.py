@@ -11,7 +11,7 @@ def waitUntilRound(
         client: algod.AlgodClient,
         round: int,
 ):
-    print("Waiting for round {}".format(round))
+    print("Waiting for round {} ...".format(round))
     currentRound = client.status().get('last-round')
     while not currentRound >= round:
         currentRound = client.status().get('last-round')
@@ -222,3 +222,14 @@ def createDummyAsset(client: algod.AlgodClient, total: int,
     print(response)
     assert response['asset-index'] is not None and response['asset-index'] > 0
     return response['asset-index']
+
+def fundAccount(client, sender, receiver, sender_sk, amt):
+    txn = transaction.PaymentTxn(
+        sender=sender,
+        receiver=receiver,
+        amt=amt,
+        sp=client.suggested_params(),
+    )
+    signedTxn = txn.sign(sender_sk)
+    client.send_transaction(signedTxn)
+    transaction.wait_for_confirmation(client, signedTxn.get_txid())
