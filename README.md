@@ -19,8 +19,11 @@ To mitigate this problem, we aim to create a service that specifically addresses
 Auctions have been around for [more than 2500 years](https://www.econport.org/content/handbook/auctions/historyofauctions.html). Through the course of history many things have changed, of course, but since the practice is so ingrained into the human history it is no surprise that auctions are also a conspicuous part of the blockchain ecosystem.
 
 Many examples can be made, from the [Maker Protocol's auctions](https://docs.makerdao.com/keepers/the-auctions-of-the-maker-protocol#auctions) for *surplus* and *collateral* of (fungible) tokens, to the [Flashbots' auctions](https://docs.flashbots.net/Flashbots-auction/overview/) for a fairer Miner Extractable Value (MEV).
+On the other hand, other forms of auction can be seen in NFTs, which (at least in their first iteration) represent a form of scarcity in digital art. 
 
-Non Fungible Tokens are currently widely exchanged and make up for a lot of volume in transactions. While ....
+There are several NFT marketplaces that allow the exchange of assets, including (but not limited to) via auctions. Some of the most popular markets include [OpenSea](https://opensea.com) (on Ethereum) and [AlgoGems](https://www.algogems.io/) (on Algorand), but there are no _specific_ auction managers `ask for confirmation`.
+
+Since the technology around NFTs creation and trading is rapidly evolving, it is normal not to find peer-reviewed papers on the subject. As of now, the most updated resources are scattered between blog posts and group chats. In particular, the [blog post from a16z](https://a16zcrypto.com/how-auction-theory-informs-implementations/) may be used as a good survey for the subject. In particular,  the authors of the post clearly explain how different kind of  auctions  can be implemented based on the needs of the users (both sellers and bidders)
 ## Smart Contract Specifications
 
 
