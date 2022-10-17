@@ -7,11 +7,25 @@
 
 *Project Name: Decentralized Auction marketplace*
 
-## Intro
+## Introduction
 This is a draft for the Algorand school proposal. The goal is to improve on the NFT auction smart contract (https://github.com/algorand-school/handson-contract) and build a decentralised auction marketplace where sellers can choose different auction mechanisms (like Sealed bid auction, Vickrey auction and Dutch auction) to list the NFT on auction.
 
+## Goal 
 
-## Roadmap
+The end-goal of the project is to create a NFT auction manager (NAM). NFT sellers deploy and manage auctions through the NAM, while bidders can interact with the currently-active auction by sending specific bids through the NAM.
+
+## State of the art
+Non Fungible Tokens are currently widely exchanged and make up for a lot of volume in transactions. While ....
+## Smart Contract Specifications
+
+
+
+## Modifications
+We improved upon theFT auction smart contract (https://github.com/algorand-school/handson-contract) by improving some functions and creating new ones.
+
+### Improvements
+### New features
+
 - [X] Sealed bid auction (Target Implementation)
 - [X] Service fees (Target Implementation)
 - [X] Overcollateralization (Target Implementation)
@@ -21,6 +35,7 @@ This is a draft for the Algorand school proposal. The goal is to improve on the 
 - [ ] Marketplace (Stretch Goal)
 - [ ] Dutch auction (Future)
 
+Auction Marketplace with global/local storage with 20 users, moving to Box storage (https://github.com/algorand/go-algorand/pull/4001) for scalability
 
 ## Decentralized Auction Marketplace Mechanics: 
 
@@ -35,9 +50,6 @@ Send `nonce`, the amount along with payment and `app_id`. Auction contract check
 Fees from the seller to make the decentralized protocol running which included Service fees - 2% fees of winning bid
 
 
-## Goal 
-
-Auction Marketplace with global/local storage with 20 users, moving to Box storage (https://github.com/algorand/go-algorand/pull/4001) for scalability
 
 
 ## Open Questions
