@@ -1,11 +1,20 @@
 # Notes on how to work with this project
 
 
-## Intro
+## Introduction
 The following notes should help the user understand how to test the collection of smart contract
 
+## Libraries
+By doing
+
+```bash
+pip3 install -r requirements.txt
+```
+
+you will have all the required libraries to use the code provided in the smart contract
+
 ## Mnemonic 
-to deploy the smart contract it is necessary to have a private key to sign the transaction. As far as the contract goes, the private key is derived from a mnemonic phrase. 
+To deploy the smart contract it is necessary to have a private key to sign the transaction. As far as the contract goes, the private key is derived from a mnemonic phrase. 
 
 Our smart contract reads the mnemonic from a file called `mnemonic.txt` (which is in the `.gitignore` file by default, so that it is not uploaded). Assuming you are using the standard `goal` command, getting the mnemonic for address `ALKJ6F2OD7COCWD2ROP5QKTMXRCJRS6U5QA34V2TVPNNU4PWIW4RSSUUIE` can be done doing:
 
@@ -31,6 +40,13 @@ with open('mnemonic.txt','r') as f:
     creator_mnemonic = f.read()
 ```
 
-## Rounds
+## Contracts
 
-## Fees
+There are three contracts:
+- Normal Auction contract in the directory [AuctionContract](./AuctionContract)
+- Sealed Auction contract in the directory [SealedAuctionContract](./SealedAuctionContract)
+- Sealed Overcollateralized Auction contract in the directory [SealedOvercollateralizedAuction](./SealedOvercollateralizedAuction)
+
+The Normal and Sealed contracts have a python script ([AuctionContract/AuctionMain.py](AuctionContract/AuctionMain.py) and [SealedAuctionContract/AuctionMainSealed.py](SealedAuctionContract/AuctionMainSealed.py) respectively) which deploys the contract, bids (or commits and bids in the sealed one) and sends the NFT to the winner. 
+
+The Sealed Overcollateralized Auction has two different test cases that can be found in the [SealedOvercollateralizedAuctionContract/Test-Cases](SealedOvercollateralizedAuctionContract/Test-Cases) directory.
