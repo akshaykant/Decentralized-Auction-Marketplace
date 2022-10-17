@@ -91,7 +91,7 @@ We added new features into the smart contracts. Please see [this feature rationa
 
 We provide the templates of auctions as specified in the previous section. For each template, we provide a python script whose function is twofold. On the one hand it acts as a test case and use case of the contract itself. On the other hand it can be used as a documented code and brief tutorial on how to use the template. 
 
-More details on this subject can be found on the [dedicated file](./NOTES.md).
+More details on this subject can be found on the [dedicated file](./NOTES.md). Each contract has a log of the transaction on the public testnet as proof of working, for example [this one](https://testnet.algoexplorer.io/tx/7QHRGXTWDCP4EWZU4ISZKXQBAWG2RKZKUNGGKPQ4J4XJLIQOPYPA) from the Sealed Overcollaterized Auction, test-case demo 1.
 
 
 ## Business Benefits
