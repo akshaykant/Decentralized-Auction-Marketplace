@@ -21,7 +21,7 @@ Auctions have been around for [more than 2500 years](https://www.econport.org/co
 Many examples can be made, from the [Maker Protocol's auctions](https://docs.makerdao.com/keepers/the-auctions-of-the-maker-protocol#auctions) for *surplus* and *collateral* of (fungible) tokens, to the [Flashbots' auctions](https://docs.flashbots.net/Flashbots-auction/overview/) for a fairer Miner Extractable Value (MEV).
 On the other hand, other forms of auction can be seen in NFTs, which (at least in their first iteration) represent a form of scarcity in digital art. 
 
-There are several NFT marketplaces that allow the exchange of assets, including (but not limited to) via auctions. Some of the most popular markets include [OpenSea](https://opensea.com) (on Ethereum) and [AlgoGems](https://www.algogems.io/) (on Algorand), but there are no _specific_ auction managers `ask for confirmation`.
+There are several NFT marketplaces that allow the exchange of assets, including (but not limited to) via auctions. Some of the most popular markets include [OpenSea](https://opensea.com) (on Ethereum) and [AlgoGems](https://www.algogems.io/) (on Algorand), but there are no _specific_ auction managers.
 
 Since the technology around NFTs creation and trading is rapidly evolving, it is normal not to find peer-reviewed papers on the subject. As of now, the most updated resources are scattered between blog posts and group chats. In particular, the [blog post from a16z](https://a16zcrypto.com/how-auction-theory-informs-implementations/) may be used as an updated (October 7th, 2022) survey for the subject. In particular, the authors of the post clearly explain how different kind of auctions can be implemented based on the needs of the users (both sellers and bidders)
 
@@ -45,8 +45,8 @@ serviceFee: abi.Uint64, *, output: abi.String) -> Expr:
 ```
 - The `closeAccountTo` function uses the [CloseRemainderTo](https://developer.algorand.org/docs/get-details/transactions/transactions/#payment-transaction) field of `pay` transactions to give the creator of the auction the service fee
 - The `on_bid` function is used to bid
-- The `paySeller` function
-- The `payWinner` function
+- The `paySeller` function that explicitly pays the seller; used to independently claim the coins
+- The `payWinner` function that explicitly pays the winner; used to independently claim the coins
 
 ### Sealed Contract
 Beside the functions listed in the [previous section](#common-function), the sealed contract has 
