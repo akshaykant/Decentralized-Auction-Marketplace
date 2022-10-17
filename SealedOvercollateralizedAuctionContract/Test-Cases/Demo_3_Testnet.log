@@ -1,0 +1,72 @@
+Relevant addresses:
+	Contract creator address:  DAAITF7M3NDODEGNYUBNXR6M4VJ5755PN7WCBK5Y6XII4SCTLE4RQO35RY
+	NTF seller address:  PT7KIGULYUAWATA2ANYEFFDFQGSTPCHQ4ELFN26ILGUAEZ7RSAHLGJRJFA
+	Bidder 0 address: FTNN5V43IMOSRH6IJYQ4AILQEXSTT6MLCZGONI3T4Y3SJRXUUJ3NO5UD4I
+	Bidder 1 address: B44ZWMTRC22VFY3OLCNJEFHFOLHJKBTNHLVEXJWTZE4L6U4Y375AX3ITBQ
+	Bidder 2 address: H4TIACI7CUSC26WHA6Y7SLFPYX6A3R6IAMIYZ7CP7ACIQF4F3I4F5L5TVA
+Creator address funding other relevant accounts with 1000000 microAlgo...
+
+--------------------------------------------
+{'asset-index': 116736878, 'confirmed-round': 24875475, 'pool-error': '', 'txn': {'sig': '4uAcdJ61g4E9AhD7eX8VPGiYnn59Ln8PIfxdC0HBub2fsld8DmOs6UPVUWWjBcKhhNYfy/wZs06HdD03f+VkCA==', 'txn': {'apar': {'an': 'AlgorandGOT', 'au': 'https://github.com/algorand-school/handson-contract/blob/main/image/algorand_throne.jpg', 'c': 'PT7KIGULYUAWATA2ANYEFFDFQGSTPCHQ4ELFN26ILGUAEZ7RSAHLGJRJFA', 'f': 'PT7KIGULYUAWATA2ANYEFFDFQGSTPCHQ4ELFN26ILGUAEZ7RSAHLGJRJFA', 'm': 'PT7KIGULYUAWATA2ANYEFFDFQGSTPCHQ4ELFN26ILGUAEZ7RSAHLGJRJFA', 'r': 'PT7KIGULYUAWATA2ANYEFFDFQGSTPCHQ4ELFN26ILGUAEZ7RSAHLGJRJFA', 't': 1, 'un': 'ALGOT'}, 'fee': 1000, 'fv': 24875473, 'gen': 'testnet-v1.0', 'gh': 'SGO1GKSzyE7IEPItTxCByw9x8FmnrCDexi9/cOUJOiI=', 'lv': 24876473, 'note': 'ckc0LNgQDy9vdw1l1nDljgNR2K4=', 'snd': 'PT7KIGULYUAWATA2ANYEFFDFQGSTPCHQ4ELFN26ILGUAEZ7RSAHLGJRJFA', 'type': 'acfg'}}}
+Seller created an NFT with ID:  116736878
+
+--------------------------------------------
+
+Creating sealed-bid auction for NFT during round:  24875476
+	Auction type: ordinary = sealed-bid first-price auction
+	Commit period lasting 12 rounds
+	Revealing period lasting 11 rounds
+	Tx ID: BNRG4J7OTFDCFYXX4BMYIO4CNZTAKP7SHEKR5423IW5RKXJBOV4A
+	Global state: {'commit': 24875497, '1st_account': b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00', 'auction_type': 0, '1st_amount': 100000, '2nd_amount': 100000, 'seller': b'|\xfe\xa4\x1a\x8b\xc5\x01`L\x1a\x03pB\x94e\x81\xa57\x88\xf0\xe1\x16V\xeb\xc8Y\xa8\x02g\xf1\x90\x0e', 'winner_paid': 0, 'seller_paid': 0, 'nft_id': 116736878, 'service_fee': 3, 'end': 24875508, 'reserve_amount': 100000, 'start': 24875485}
+Created contract with AppID:  116736891
+
+--------------------------------------------
+Setting the auction application ...
+	Tx ID:KBF6TAKN5QHCGXGQLNHN73ZXO4SSKUEOWUQQXF6BCXW23BA6RVSA
+	Tx ID:3TPSDJI43EZM4BTI5QU6WACKPXCK355BGQAXFQIQ5WXJ2VYASKTQ
+	Tx ID:DJ5ZE5SZ47TN3JT3J6B7IBDSESWKTNJOGHJBCPFSOVXO47NZFBCQ
+Waiting for the auction to start.
+Waiting for round 24875485 ...
+--------------------------------------------
+Committing bids to the auction ...
+	Commitment (hex): eef5528471d0a095a96a6725f580494a2ee5018372a1b8bfff550e485383d2f7
+	Tx ID:PUUNMNLBO5625NGPFSP2D736I7ZPJI2NYKGGWLKZXCVXCLGKSTNQ
+	Tx ID:VCGYIGE4XBXR6TVKFL65GCTUVRXFVPNOIP77EUFMEKRTR44M27QQ
+	Local state: {'commitment': b'\xee\xf5R\x84q\xd0\xa0\x95\xa9jg%\xf5\x80IJ.\xe5\x01\x83r\xa1\xb8\xbf\xffU\x0eHS\x83\xd2\xf7', 'deposit': 310000}
+	Commitment (hex): a732b22dd3193be9ea567f6d25c82e899a768d9e904409cf3d57aa9c5be96c24
+	Tx ID:U3CGB2KDUPNTJFEUGQ6DQSLNRTNQ5B5A5MKLCOOX4X66FT3O7XTQ
+	Tx ID:BX76ESPN7HDJ74WFTPTXPTP5XSW3WY7F7QXZI4RK2LKCKEJTJXDQ
+	Local state: {'commitment': b'\xa72\xb2-\xd3\x19;\xe9\xeaV\x7fm%\xc8.\x89\x9av\x8d\x9e\x90D\t\xcf=W\xaa\x9c[\xe9l$', 'deposit': 290000}
+	Commitment (hex): 79d430ddda9bdbfadb5522cfd68313f87edfa9ae219a4d6b8f50ecc237218afc
+	Tx ID:IYALYXE3GZMRQJYZ6T6RBH2M2DDKFJZ5J2VAGIK6ABKKEWDK7Y2A
+	Tx ID:JU67U5MICCRO3BCFDSQBHHEQFPXLC2V2MKZKY73NLC7AHYGOM26Q
+	Local state: {'commitment': b'y\xd40\xdd\xda\x9b\xdb\xfa\xdbU"\xcf\xd6\x83\x13\xf8~\xdf\xa9\xae!\x9aMk\x8fP\xec\xc27!\x8a\xfc', 'deposit': 350000}
+Waiting for round 24875497 ...
+Commit phase ended.
+--------------------------------------------
+Bidder 1 revealing the bids ...
+	Tx ID:H4JNQYL5YKWRV7UOIPTEMBV7HK4XFSS6EBMGRVUT6XXX25OPR75A
+	Global state: {'1st_account': b',\xda\xde\xd7\x9bC\x1d(\x9f\xc8N!\xc0!p%\xe59\xf9\x8b\x16L\xe6\xa3s\xe67$\xc6\xf4\xa2v', 'commit': 24875497, 'auction_type': 0, 'end': 24875508, '2nd_amount': 100000, '1st_amount': 180000, 'nft_id': 116736878, 'seller_paid': 0, 'reserve_amount': 100000, 'seller': b'|\xfe\xa4\x1a\x8b\xc5\x01`L\x1a\x03pB\x94e\x81\xa57\x88\xf0\xe1\x16V\xeb\xc8Y\xa8\x02g\xf1\x90\x0e', 'service_fee': 3, 'winner_paid': 0, 'start': 24875485}
+	Local state: {'commitment': b'\xee\xf5R\x84q\xd0\xa0\x95\xa9jg%\xf5\x80IJ.\xe5\x01\x83r\xa1\xb8\xbf\xffU\x0eHS\x83\xd2\xf7'}
+Bidder 2 revealing the bids ...
+	Tx ID:SYXLOVX6I43I7DXWKYWRX3645F6X2FCS235XRXEBQTU3JONE54OA
+	Global state: {'commit': 24875497, '1st_amount': 200000, 'nft_id': 116736878, 'auction_type': 0, 'end': 24875508, 'reserve_amount': 100000, 'seller': b'|\xfe\xa4\x1a\x8b\xc5\x01`L\x1a\x03pB\x94e\x81\xa57\x88\xf0\xe1\x16V\xeb\xc8Y\xa8\x02g\xf1\x90\x0e', 'service_fee': 3, '1st_account': b'\x0f9\x9b2q\x16\xb5R\xe3nX\x9a\x92\x14\xe5r\xce\x95\x06m:\xeaK\xa6\xd3\xc98\xbfS\x98\xdf\xfa', '2nd_amount': 180000, 'seller_paid': 0, 'start': 24875485, 'winner_paid': 0}
+	Local state: {'commitment': b'\xa72\xb2-\xd3\x19;\xe9\xeaV\x7fm%\xc8.\x89\x9av\x8d\x9e\x90D\t\xcf=W\xaa\x9c[\xe9l$'}
+Bidder 3 does not reveal the bids ...
+Waiting for round 24875508 ...
+Auction ended.
+--------------------------------------------
+Winner opting in the NFT ...
+Winner opted in the NFT.
+Winner claiming the NFT ...
+	Tx ID:J7ULQLSGCN3YBUCNEK6NYAZOVDUAC4GY5BEDM3CYC7NOKN3FRW7Q
+	Winner claimed:  1
+Winner claimed the NFT.
+Seller claiming the payout ...
+	Tx ID:3NYPPPHJZDYX2DGJSMWJ65STKNCY4PO7CORBHUXP756WHBPD7VJQ
+	Seller claimed:  1
+Seller claimed the NFT.
+Waiting for round 24875516 ...
+Closing the auction application ...
+	 Tx ID:A35ZSQLOAT4MJJFD5LTCNO3KRNALUCEKPKS3AFUX4EVPTCOYULCQ
+Application closed. Remaining funds returned to the contract creator.
