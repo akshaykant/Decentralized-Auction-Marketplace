@@ -23,8 +23,36 @@ On the other hand, other forms of auction can be seen in NFTs, which (at least i
 
 There are several NFT marketplaces that allow the exchange of assets, including (but not limited to) via auctions. Some of the most popular markets include [OpenSea](https://opensea.com) (on Ethereum) and [AlgoGems](https://www.algogems.io/) (on Algorand), but there are no _specific_ auction managers `ask for confirmation`.
 
-Since the technology around NFTs creation and trading is rapidly evolving, it is normal not to find peer-reviewed papers on the subject. As of now, the most updated resources are scattered between blog posts and group chats. In particular, the [blog post from a16z](https://a16zcrypto.com/how-auction-theory-informs-implementations/) may be used as a good survey for the subject. In particular,  the authors of the post clearly explain how different kind of  auctions  can be implemented based on the needs of the users (both sellers and bidders)
+Since the technology around NFTs creation and trading is rapidly evolving, it is normal not to find peer-reviewed papers on the subject. As of now, the most updated resources are scattered between blog posts and group chats. In particular, the [blog post from a16z](https://a16zcrypto.com/how-auction-theory-informs-implementations/) may be used as an updated (October 7th, 2022) survey for the subject. In particular, the authors of the post clearly explain how different kind of auctions can be implemented based on the needs of the users (both sellers and bidders)
 ## Smart Contract Specifications
+There are three smart contracts. Each of them is an improvemnt over the original contracts presented in the school. In particular
+- Normal Auction contract in the directory [AuctionContract](./AuctionContract)
+- Sealed Auction contract in the directory [SealedAuctionContract](./SealedAuctionContract)
+- Sealed Overcollateralized Auction contract in the directory [SealedOvercollateralizedAuction](./SealedOvercollateralizedAuction)
+
+In the following we provide a specification of the main functions of the contracts.
+
+### Normal Auction Contract
+
+The contracts have some common functions. The most important are:
+
+- The `create_app` function creates the auction function:
+```python
+def create_app(seller: abi.Account, nftID: abi.Uint64, startRound: abi.Uint64,
+endRound: abi.Uint64, reserve: abi.Uint64, minBidIncrement: abi.Uint64,
+serviceFee: abi.Uint64, *, output: abi.String) -> Expr:
+```
+- The `closeAccountTo` function uses the [CloseRemainderTo](https://developer.algorand.org/docs/get-details/transactions/transactions/#payment-transaction) field of `pay` transactions to give the creator of the auction the service fee
+- The `on_bid` function is used to bid
+- The `paySeller` function
+- The `payWinner` function
+
+### Sealed Contract
+Beside the functions listed in the [previous section](#common-function), the sealed contract has 
+- the `on_commit` function used to place the commitment before the bidding
+
+### Overcollateralized Contract
+
 
 
 
@@ -47,9 +75,12 @@ For sealed-type we made some specific improvements too:
 
 ### New features
 
-- Service fees 
-- Overcollateralization 
-- Vickrey auction 
+We added new features into the smart contracts. Please see [this feature rationale](./FEATURES.md)
+
+- Service fees: it is possible to take a fee for the creator of the auction from the winning bid. The fee is computed as a percentage of the winning bid. If no service fee is required, it is possible to set to `0` the `serviceFee` variable. 
+- Overcollateralization: we give the possibility to lock up more ALGOs than their bid value itself requires. This way an observer can only learn an upper bound of a bid’s value, increasing privacy for the bidder while preventing spamming and stair bidding.
+- Vickrey auction: similar to sealed-bid auction, except the winner pays the value of the second-highest bid 
+
 
 ### Future features
 - Marketplace 
