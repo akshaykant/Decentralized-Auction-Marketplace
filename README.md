@@ -7,35 +7,48 @@
 
 *Project Name: Decentralized Auction marketplace*
 
-## Introduction
-This is a draft for the Algorand school proposal. The goal is to improve on the NFT auction smart contract (https://github.com/algorand-school/handson-contract) and build a decentralised auction marketplace where sellers can choose different auction mechanisms (like Sealed bid auction, Vickrey auction and Dutch auction) to list the NFT on auction.
-
 ## Goal 
 
-The end-goal of the project is to create a NFT auction manager (NAM). NFT sellers deploy and manage auctions through the NAM, while bidders can interact with the currently-active auction by sending specific bids through the NAM.
+The end-goal of the project is to create a NFT auction manager (NAM) based on the contracts presented [at the school](https://github.com/algorand-school/handson-contract). NFT sellers deploy and manage auctions through the NAM, while bidders can interact with the currently-active auction by sending specific bids through the NAM.
+
+Of course, the management of auctions is part of some solutions already deployed (see the [State of the art](#state-of-the-art) section). On the other hand, those are *ad hoc* solutions and it is not easy to deploy them separately from the market itself. This creates a network effect that *de facto* increases the centralization of the markets to a handful of competitors that can easily create a monopoly (or oligopoly) and [threat the opennes of the environment](https://www.fon.hum.uva.nl/rob/Courses/InformationInSpeech/CDROM/Literature/LOTwinterschool2006/szabo.best.vwh.net/ttps.html). We argue that this scenario would hinder blockchain's potential at the detriment of the end-users.
+
+To mitigate this problem, we aim to create a service that specifically addresses *only* the management of auctions. We believe that this service could be an important tool in the decentralization of markets (at least of those related to NFTs): it simplifies the sale of assets, from the seller's point of view, removing friction and opening the creation of many (possibly smaller) online markets.
 
 ## State of the art
+Auctions have been around for [more than 2500 years](https://www.econport.org/content/handbook/auctions/historyofauctions.html). Through the course of history many things have changed, of course, but since the practice is so ingrained into the human history it is no surprise that auctions are also a conspicuous part of the blockchain ecosystem.
+
+Many examples can be made, from the [Maker Protocol's auctions](https://docs.makerdao.com/keepers/the-auctions-of-the-maker-protocol#auctions) for *surplus* and *collateral* of (fungible) tokens, to the [Flashbots' auctions](https://docs.flashbots.net/Flashbots-auction/overview/) for a fairer Miner Extractable Value (MEV).
+
 Non Fungible Tokens are currently widely exchanged and make up for a lot of volume in transactions. While ....
 ## Smart Contract Specifications
 
 
 
 ## Modifications
-We improved upon theFT auction smart contract (https://github.com/algorand-school/handson-contract) by improving some functions and creating new ones.
+We improved upon the NFT auction smart contract (https://github.com/algorand-school/handson-contract) by improving some functions and creating new ones. In particular, we maintained two contracts: one which supports sealed bids and one without.
+
+In the following we list the specific changes we made to the contract
 
 ### Improvements
+
+This is a list of improvement with respect the original contract. For both the ordinary and sealed-type, we:
+    - modified the tracking of time from timestamp to rounds: this way we use the blockchain inner clocking mechanism and we are not subject to subjective changes in the participants' watches
+    - individual claiming - explain why `please explain`
+    - check of dynamic datatypes according to ABI guideline recommendations
+- for sealed-type:
+    - improved obfuscation with a `nonce`: the goal is to avoid a [rainbow attack](https://en.wikipedia.org/wiki/Rainbow_table)
+    - code optimization - removing unnecessary check (`start<commit` and `commit<end`, where it was unnecessary to check `start<end`, etc.)
+
 ### New features
 
-- [X] Sealed bid auction (Target Implementation)
-- [X] Service fees (Target Implementation)
-- [X] Overcollateralization (Target Implementation)
-- [X] Improve seal bidding with nonce for better security (Target Implementation)
-- [X] Vickrey auction (Future Goal)
+- Service fees 
+- Overcollateralization 
+- Vickrey auction 
 
-- [ ] Marketplace (Stretch Goal)
-- [ ] Dutch auction (Future)
-
-Auction Marketplace with global/local storage with 20 users, moving to Box storage (https://github.com/algorand/go-algorand/pull/4001) for scalability
+### Future features
+- Marketplace 
+- Dutch auction 
 
 ## Decentralized Auction Marketplace Mechanics: 
 
