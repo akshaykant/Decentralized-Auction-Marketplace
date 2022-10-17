@@ -33,12 +33,14 @@ In the following we list the specific changes we made to the contract
 ### Improvements
 
 This is a list of improvement with respect the original contract. For both the ordinary and sealed-type, we:
-    - modified the tracking of time from timestamp to rounds: this way we use the blockchain inner clocking mechanism and we are not subject to subjective changes in the participants' watches
-    - individual claiming - explain why `please explain`
-    - check of dynamic datatypes according to ABI guideline recommendations
-- for sealed-type:
-    - improved obfuscation with a `nonce`: the goal is to avoid a [rainbow attack](https://en.wikipedia.org/wiki/Rainbow_table)
-    - code optimization - removing unnecessary check (`start<commit` and `commit<end`, where it was unnecessary to check `start<end`, etc.)
+
+- modified the tracking of time from timestamp to rounds: this way we use the blockchain inner clocking mechanism and we are not subject to subjective changes in the participants' watches
+- individual claiming - explain why `please explain`
+- check of dynamic datatypes according to ABI guideline recommendations
+
+For sealed-type we made some specific improvements too:
+- improved obfuscation with a `nonce`: the goal is to avoid a [rainbow attack](https://en.wikipedia.org/wiki/Rainbow_table)
+- code optimization - removing unnecessary check (`start<commit` and `commit<end`, where it was unnecessary to check `start<end`, etc.)
 
 ### New features
 
