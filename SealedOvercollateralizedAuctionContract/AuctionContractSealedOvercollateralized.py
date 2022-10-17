@@ -443,11 +443,11 @@ def getRouter():
                 App.globalGet(nft_id_key),
                 App.globalGet(lead_bid_account_key)
             ),
-            # Refund the winner the overcollaterization depending on auction type
+            # In case of Vickrey auction, return to the winner up to the second highest bid
             If(
                 App.globalGet(auction_type_key) == Int(VICKREY_TYPE)
             ).Then(
-                # In case of Vickrey auction, return up to the second highest bid
+
                 # Check if the return is above the min transaction fee not to lock funds because nothing can be
                 # returned in this case
                 If(
@@ -457,20 +457,6 @@ def getRouter():
                     repayAmount(
                         App.globalGet(lead_bid_account_key),
                         App.globalGet(lead_bid_amount_key) - App.globalGet(second_highest_bid_amount_key),
-                    ),
-                )
-            )
-            .Else(
-                # In case of ordinary auction, repay up to the highest bid
-                # Check if the return is above the min transaction fee not to lock funds because nothing can be
-                # returned in this case
-                If(
-                    App.globalGet(lead_bid_amount_key) - App.globalGet(lead_bid_amount_key) >=
-                    Global.min_txn_fee()
-                ).Then(
-                    repayAmount(
-                        App.globalGet(lead_bid_account_key),
-                        App.globalGet(lead_bid_amount_key) - App.globalGet(lead_bid_amount_key),
                     ),
                 )
             ),
