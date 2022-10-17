@@ -24,7 +24,6 @@ end_round_key = Bytes("end")
 reserve_amount_key = Bytes("reserve_amount")
 lead_bid_amount_key = Bytes("1st_amount")
 lead_bid_account_key = Bytes("1st_account")
-lead_bid_deposit_key = Bytes("1st_deposit")
 second_highest_bid_amount_key = Bytes("2nd_amount")
 auction_type_key = Bytes("auction_type")
 service_fee_key = Bytes("service_fee")
@@ -140,8 +139,6 @@ on_clear_state = Seq(
             # Set the new highest bid and the leading account
             App.globalPut(lead_bid_amount_key, App.localGet(Txn.sender(), deposit_local_key)),
             App.globalPut(lead_bid_account_key, Txn.sender()),
-            # Set the deposit belonging to the highest bid
-            App.globalPut(lead_bid_deposit_key, App.localGet(Txn.sender(), deposit_local_key)),
         )
     )
     .Else(
@@ -203,8 +200,6 @@ def getRouter():
             # Set highest and second highest bid amounts to reserve amount
             App.globalPut(lead_bid_amount_key, reserve.get()),
             App.globalPut(second_highest_bid_amount_key, reserve.get()),
-            # Set initial deposit amount of highest bid to zero
-            App.globalPut(lead_bid_deposit_key, Int(0)),
             # Mark that neither seller nor winner have been paid
             App.globalPut(seller_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
             App.globalPut(winner_has_been_paid_key, Int(HAS_NOT_BEEN_PAID)),
@@ -318,8 +313,16 @@ def getRouter():
                         # Set the new highest bid and the leading account
                         App.globalPut(lead_bid_amount_key, amount.get()),
                         App.globalPut(lead_bid_account_key, Txn.sender()),
-                        # Set the deposit belonging to the highest bid
-                        App.globalPut(lead_bid_deposit_key, App.localGet(Txn.sender(), deposit_local_key)),
+                        # Return the overcollaterization of the new lead bid
+                        If(
+                            App.localGet(Txn.sender(), deposit_local_key) - App.globalGet(lead_bid_amount_key) >=
+                            Global.min_txn_fee()
+                        ).Then(
+                            repayAmount(
+                                Txn.sender(),
+                                App.localGet(Txn.sender(), deposit_local_key) - App.globalGet(lead_bid_amount_key),
+                            ),
+                        ),
                     )
                 )
                 .Else(
@@ -448,12 +451,12 @@ def getRouter():
                 # Check if the return is above the min transaction fee not to lock funds because nothing can be
                 # returned in this case
                 If(
-                    App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key) >=
+                    App.globalGet(lead_bid_amount_key) - App.globalGet(second_highest_bid_amount_key) >=
                     Global.min_txn_fee()
                 ).Then(
                     repayAmount(
                         App.globalGet(lead_bid_account_key),
-                        App.globalGet(lead_bid_deposit_key) - App.globalGet(second_highest_bid_amount_key),
+                        App.globalGet(lead_bid_amount_key) - App.globalGet(second_highest_bid_amount_key),
                     ),
                 )
             )
@@ -462,12 +465,12 @@ def getRouter():
                 # Check if the return is above the min transaction fee not to lock funds because nothing can be
                 # returned in this case
                 If(
-                    App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key) >=
+                    App.globalGet(lead_bid_amount_key) - App.globalGet(lead_bid_amount_key) >=
                     Global.min_txn_fee()
                 ).Then(
                     repayAmount(
                         App.globalGet(lead_bid_account_key),
-                        App.globalGet(lead_bid_deposit_key) - App.globalGet(lead_bid_amount_key),
+                        App.globalGet(lead_bid_amount_key) - App.globalGet(lead_bid_amount_key),
                     ),
                 )
             ),

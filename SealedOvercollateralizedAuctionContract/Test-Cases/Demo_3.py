@@ -1,18 +1,14 @@
-# Description of demo 1:
-#  This script demonstrates a case of a Vickrey style auction with overcollateralization.
-#  Three bidders compete for a  NFT. Only one bidder creates a valid bid - i.e. above the asking price and
-#  overcollateralized. One bidder creates an overcollateralized bid but below the asking price. The third bidder creates
-#  a bid above the asking price but does not deposit sufficient collateral.
-#  All bidders reveal their bids during the reveal phase. The two invalid bidders get refunded their deposits.
-#  When the auction ends, the contract is tried to be deleted. This action fails because the assets have not yet been
-#  claimed by the seller and by the winner.
-#  The winner tries then to claim the NFT. The action fails because the winning account is not opted into the NFT.
-#  The seller successfully claims the payment. A service fee is deducted from that amount (which remains in the contract
-#  account).
-#  The winner opts in the NFT and claims it from the contract. Because of the Vickrey auction, the winner pays only the
-#  amount of the second bid, thus gets the difference between their deposit and the second highest valid bid refunded.
-#  Since the other two bids made were invalid, the asking price is considered as the second highest valid bid.
-#  The contract is finally deleted and the remaining funds (including the service fee) send to the contract creator.
+# Description of demo 3:
+#  This script demonstrates a case of a first-price sealed-bid auction with overcollateralization.
+#  Three bidders compete for a NFT. All create valid bids - i.e. above the asking price and overcollateralized.
+#  The the third bidder bids the highest amount, and the second bidder the second highest.
+#  The first and second bidder reveal their bids, while the third one does not.
+#  The first two bidders get their collateral refunded, while the third one's is kept.
+#  The second bidder is the winner.
+#  The winner opts in the NFT and claims it.
+#  The seller claims the payment. A service fee is deducted from that amount (which remains in the contract account).
+#  The contract is deleted and the remaining funds (including the service fee and the collateral of the unrevealed
+#  bidder) sent to the contract creator.
 
 # -----------------           Imports          -----------------
 from random import randrange, seed
@@ -34,7 +30,7 @@ algod_token = "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
 # Auction type. Possible options:
 # - ORDINARY_TYPE = sealed-bid first-price auction
 # - VICKREY_TYPE = sealed-bid second-price auction
-AUCTION_TYPE = VICKREY_TYPE
+AUCTION_TYPE = ORDINARY_TYPE
 
 # Amount to fund bidder and seller accounts with
 AMT = 1_000_000
@@ -43,13 +39,13 @@ AMT = 1_000_000
 RESERVE = 100_000
 
 # Bids of account (in microAlgo)
-BID_AMOUNTS = [200_000, 150_000, 350_000]
+BID_AMOUNTS = [180_000, 200_000, 250_000]
 
 # Deposits, i.e. collateralization of bids, for each account (in microAlgo)
-DEPOSITS = [300_000, 90_000, 110_000]
+DEPOSITS = [310_000, 290_000, 350_000]
 
 # Fee taken by the contract creator as percentage of the winning bid
-SERVICE_FEE = 2
+SERVICE_FEE = 3
 
 # Set seed of random generator - for testing purposes only!
 seed(42)
@@ -147,38 +143,19 @@ def main():
     waitUntilRound(algod_client, commitEndRound)
     print("Commit phase ended.")
     print("--------------------------------------------")
-    print("Revealing the auction bids ...")
-    for i, bsk in enumerate(bidders_sk):
-        placeBid(algod_client, app_id, bsk, BID_AMOUNTS[i], NONCES[i])
+    print("Bidder 1 revealing the bids ...")
+    i = 0
+    placeBid(algod_client, app_id, bidders_sk[i], BID_AMOUNTS[i], NONCES[i])
+    print("Bidder 2 revealing the bids ...")
+    i = 1
+    placeBid(algod_client, app_id, bidders_sk[i], BID_AMOUNTS[i], NONCES[i])
+    print("Bidder 3 does not reveal the bids ...")
     # Wait for the auction to end
     waitUntilRound(algod_client, endRound)
     print("Auction ended.")
     print("--------------------------------------------")
-    print("Trying to close the auction application ...")
-    try:
-        closeAuction(algod_client, app_id, seller_sk)
-    except error.AlgodHTTPError as e:
-        print("\tCan't close the auction because payouts not distributed")
-        print("\tError:" + str(e))
-
-    print("Winner trying to claim the NFT ...")
-    winner_sk, winner_addr = getWinner(algod_client, app_id, bidders_sk, bidders)
-    try:
-        claimWinner(algod_client, app_id, winner_sk)
-    except error.AlgodHTTPError as e:
-        print("\tCan't close the auction because payouts not distributed")
-        print("\tError - winner not opted-in NTF: ")
-        print("\tError:" + str(e))
-
-    print("Seller claiming the payout......")
-    claimSeller(algod_client, app_id, seller_sk)
-    print("Seller claimed the NFT.")
-
-    # Wait for one round for easier inspection of app state with Sandbox
-    currentRound = algod_client.status().get('last-round')
-    waitUntilRound(algod_client, currentRound+1)
-
     print("Winner opting in the NFT ...")
+    winner_sk, winner_addr = getWinner(algod_client, app_id, bidders_sk, bidders)
     optInToAsset(algod_client, nftID, winner_sk)
     print("Winner opted in the NFT.")
 
@@ -186,11 +163,15 @@ def main():
     claimWinner(algod_client, app_id, winner_sk)
     print("Winner claimed the NFT.")
 
+    print("Seller claiming the payout ...")
+    claimSeller(algod_client, app_id, seller_sk)
+    print("Seller claimed the NFT.")
+
     # Wait for one round for easier inspection of app state with Sandbox
     currentRound = algod_client.status().get('last-round')
     waitUntilRound(algod_client, currentRound + 1)
 
-    print("Closing the auction application......")
+    print("Closing the auction application ...")
     closeAuction(algod_client, app_id, creator_private_key)
     print("Application closed. Remaining funds returned to the contract creator.")
 

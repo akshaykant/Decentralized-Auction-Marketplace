@@ -104,7 +104,6 @@ def closeAuction(
         # if "1st_account" is not the zero address
         accounts.append(encoding.encode_address(global_state["1st_account"]))
 
-    # Not sure why this is needed
     accounts.append(app_addr)
 
     deleteTxn = transaction.ApplicationDeleteTxn(
@@ -132,6 +131,8 @@ def placeBid(
     global_state = read_global_state(client, app_id)
     nft_id = global_state['nft_id']
 
+    accounts: List[str] = [encoding.encode_address(global_state["1st_account"])]
+
     atc = AtomicTransactionComposer()
     bidder_addr = account.address_from_private_key(bidder_sk)
     bidder_signer = AccountTransactionSigner(bidder_sk)
@@ -150,6 +151,7 @@ def placeBid(
                         sp=suggestedParams,
                         signer=bidder_signer,
                         method_args=app_args,
+                        accounts=accounts,
                         foreign_assets=[nft_id],
                         )
 
@@ -182,6 +184,8 @@ def commitAuctionApp(
     tws = TransactionWithSigner(ptxn, bidder_signer)
     atc.add_transaction(tws)
 
+    accounts: List[str] = [encoding.encode_address(global_state["1st_account"])]
+
     with open("./com_auction_contract.json") as f:
         js = f.read()
 
@@ -199,6 +203,7 @@ def commitAuctionApp(
         sp=suggestedParams,
         signer=bidder_signer,
         method_args=app_args,
+        accounts=accounts,
         on_complete=transaction.OnComplete.OptInOC,
         foreign_assets=[nft_id]
     )
