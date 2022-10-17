@@ -1,4 +1,4 @@
-# Algorand School Project Proposal
+# Algorand School Project
 
 ## Group G4: 
 1. Uroš Hudomalj - https://github.com/uhudo
