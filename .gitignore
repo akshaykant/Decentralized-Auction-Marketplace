@@ -11,6 +11,9 @@ AuctionContract/auction_contract.json
 auction_approval.teal
 auction_clear.teal
 auction_contract.json
+SealedOvercollateralizedAuctionContract/auction_approval.teal
+SealedOvercollateralizedAuctionContract/auction_clear.teal
+SealedOvercollateralizedAuctionContract/auction_contract.json
 mnemonic.txt
 
 __pycache__/*
