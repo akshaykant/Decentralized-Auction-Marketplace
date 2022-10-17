@@ -67,7 +67,7 @@ In the following we list the specific changes we made to the contract
 This is a list of improvement with respect the original contract. For both the ordinary and sealed-type, we:
 
 - modified the tracking of time from timestamp to rounds: this way we use the blockchain inner clocking mechanism and we are not subject to subjective changes in the participants' watches
-- individual claiming - explain why `please explain`
+- individual claiming: seller and the winner can independently claim funds (e.g. without winner blocking the seller by not opting in the NFT) 
 - check of dynamic datatypes according to ABI guideline recommendations
 
 For sealed-type we made some specific improvements too:
