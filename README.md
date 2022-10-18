@@ -107,3 +107,7 @@ We envision a structure similar to the image below:
 A user (either bidder or seller) can use the application to spawn a new auction that follows one of our templates and use the same app to manage the bidding process itself. More details on the business side of the completed manager can be found in [this post](https://akshay-kant.medium.com/decentralised-marketplace-ca8e37655c64) written by one of us.
 
 By focusing on the auction process and management themselves, without dealing with other accessory processes, we claim it would be easier to [avoid auction bugs](https://twitter.com/0xInuarashi/status/1517674505975394304) which can impact both sellers and bidders.
+
+## Presentation
+
+the slides of the presentation can be found [here](https://docs.google.com/presentation/d/1jLvHgPlL4SFEF_any3UwLrdJICofv4jWICG3leJhls4/edit?usp=sharing)
